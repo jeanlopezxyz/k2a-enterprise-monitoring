@@ -1,0 +1,111 @@
+########################################################################
+# K2A Enterprise Monitoring Kind Configuration
+# Based on kagent kind-config.yaml
+########################################################################
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: k2a-monitoring
+containerdConfigPatches:
+- |-
+  [plugins."io.containerd.grpc.v1.cri".registry]
+    config_path = "/etc/containerd/certs.d"
+
+# Network configuration
+networking:
+  # API server configuration
+  apiServerAddress: "127.0.0.1"
+  # Random port for API server (recommended for multiple clusters)
+  # apiServerPort: 6443
+  
+  # Pod and service subnets
+  podSubnet: "10.244.0.0/16"
+  serviceSubnet: "10.96.0.0/16"
+
+# Runtime configuration
+runtimeConfig:
+  # Disable alpha APIs for stability
+  "api/alpha": "false"
+
+# Add to the apiServer certSANs for docker service access
+kubeadmConfigPatchesJSON6902:
+  - group: kubeadm.k8s.io
+    version: v1beta3
+    kind: ClusterConfiguration
+    patch: |
+      - op: add
+        path: /apiServer/certSANs/-
+        value: docker
+      - op: add
+        path: /apiServer/certSANs/-
+        value: k2a-registry
+
+# Node configuration for K2A monitoring
+nodes:
+  - role: control-plane
+    # Extra port mappings for monitoring services
+    extraPortMappings:
+      # Prometheus metrics
+      - containerPort: 30090
+        hostPort: 9090
+        protocol: TCP
+      # Grafana dashboard  
+      - containerPort: 30080
+        hostPort: 3000
+        protocol: TCP
+      # K2A Monitoring UI
+      - containerPort: 30081
+        hostPort: 8080
+        protocol: TCP
+      # AlertManager
+      - containerPort: 30093
+        hostPort: 9093
+        protocol: TCP
+    
+    # Additional mounts for development
+    extraMounts:
+      - hostPath: /tmp/k2a-monitoring
+        containerPath: /tmp/k2a-monitoring
+        
+  # Optional worker node for testing scaling
+  # - role: worker
+
+# Kubernetes feature gates for monitoring
+featureGates:
+  # Enable useful features for monitoring
+  "ProbeTerminationGracePeriod": true
+  "ServiceLoadBalancerClass": true
+  
+# Kubeadm configuration patches for monitoring
+kubeadmConfigPatches:
+- |
+  kind: ClusterConfiguration
+  metadata:
+    name: config
+  apiServer:
+    extraArgs:
+      # Enable audit logging for monitoring
+      audit-log-maxage: "30"
+      audit-log-maxbackup: "3"
+      audit-log-maxsize: "100"
+      audit-log-path: "/var/log/audit.log"
+      # Enable admission controllers for security
+      enable-admission-plugins: "NamespaceLifecycle,LimitRanger,ServiceAccount,DefaultStorageClass,DefaultTolerationSeconds,MutatingAdmissionWebhook,ValidatingAdmissionWebhook,ResourceQuota,PodSecurity"
+  controllerManager:
+    extraArgs:
+      # Enable metrics for monitoring
+      bind-address: "0.0.0.0"
+  scheduler:
+    extraArgs:
+      # Enable metrics for monitoring  
+      bind-address: "0.0.0.0"
+- |
+  kind: KubeletConfiguration
+  serverTLSBootstrap: true
+  # Enable kubelet metrics
+  authentication:
+    anonymous:
+      enabled: false
+    webhook:
+      enabled: true
+  authorization:
+    mode: Webhook

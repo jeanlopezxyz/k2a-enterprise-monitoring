@@ -1,0 +1,56 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: k2a-monitoring-netpol
+  namespace: k2a-monitoring
+  labels:
+    app: k2a-monitoring
+    component: security
+spec:
+  podSelector:
+    matchLabels:
+      app: k2a-monitoring
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Permitir tráfico desde Prometheus/Grafana
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: openshift-monitoring
+    ports:
+    - protocol: TCP
+      port: 8080
+    - protocol: TCP
+      port: 8443
+  # Permitir tráfico interno del namespace
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: k2a-monitoring
+    ports:
+    - protocol: TCP
+      port: 8080
+  egress:
+  # Permitir acceso a la API de Kubernetes
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443
+    - protocol: TCP
+      port: 6443
+  # Permitir DNS
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+  # Permitir acceso a métricas del cluster
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 10250
+    - protocol: TCP
+      port: 10255

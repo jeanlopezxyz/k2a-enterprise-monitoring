@@ -1,0 +1,38 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: k2a-monitoring-base
+
+resources:
+# RBAC
+- rbac/namespace.yaml
+- rbac/serviceaccount.yaml
+- rbac/clusterrole.yaml
+- rbac/clusterrolebinding.yaml
+
+# Security
+- security/scc.yaml
+- security/scc-binding.yaml
+- security/networkpolicy.yaml
+
+# Configuration
+- configmaps/agent-config.yaml
+
+# Monitoring
+- monitoring/servicemonitor.yaml
+- monitoring/prometheusrule.yaml
+- monitoring/grafana-dashboard.yaml
+
+# Application
+- deployments/deployment.yaml
+- services/service.yaml
+- services/route.yaml
+
+commonLabels:
+  app: k2a-monitoring
+  project: k2a-enterprise
+  
+images:
+- name: quay.io/k2a/monitoring-agent
+  newTag: v1.0.0

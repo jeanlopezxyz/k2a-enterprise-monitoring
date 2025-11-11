@@ -1,0 +1,63 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: k2a-monitoring-reader
+  labels:
+    app: k2a-monitoring
+    component: rbac
+rules:
+# Permisos para leer recursos del cluster
+- apiGroups: [""]
+  resources: 
+    - nodes
+    - nodes/metrics
+    - nodes/stats
+    - nodes/proxy
+    - services
+    - endpoints
+    - pods
+    - pods/log
+    - pods/status
+    - configmaps
+    - secrets
+    - persistentvolumes
+    - persistentvolumeclaims
+    - namespaces
+    - events
+  verbs: ["get", "list", "watch"]
+
+# Permisos para apps
+- apiGroups: ["apps"]
+  resources:
+    - deployments
+    - daemonsets
+    - replicasets
+    - statefulsets
+  verbs: ["get", "list", "watch"]
+
+# Permisos para metrics
+- apiGroups: ["metrics.k8s.io"]
+  resources:
+    - nodes
+    - pods
+  verbs: ["get", "list"]
+
+# Permisos específicos de OpenShift
+- apiGroups: ["config.openshift.io"]
+  resources:
+    - clusterversions
+    - infrastructures
+    - networks
+  verbs: ["get", "list", "watch"]
+
+- apiGroups: ["route.openshift.io"]
+  resources:
+    - routes
+  verbs: ["get", "list", "watch"]
+
+# Permisos para monitoring
+- apiGroups: ["monitoring.coreos.com"]
+  resources:
+    - servicemonitors
+    - prometheusrules
+  verbs: ["get", "list", "watch"]

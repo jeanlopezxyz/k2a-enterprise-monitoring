@@ -1,0 +1,66 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: k2a-monitoring-rules
+  namespace: k2a-monitoring
+  labels:
+    app: k2a-monitoring
+    component: monitoring
+    prometheus: kube-prometheus
+spec:
+  groups:
+  - name: k2a.cluster.rules
+    interval: 30s
+    rules:
+    - alert: K2AAgentDown
+      expr: up{job="k2a-monitoring"} == 0
+      for: 2m
+      labels:
+        severity: critical
+        service: k2a-monitoring
+      annotations:
+        summary: "K2A Monitoring Agent is down"
+        description: "K2A Monitoring Agent has been down for more than 2 minutes"
+        
+    - alert: K2AHighMemoryUsage
+      expr: k2a_agent_memory_usage_bytes / k2a_agent_memory_limit_bytes > 0.9
+      for: 5m
+      labels:
+        severity: warning
+        service: k2a-monitoring
+      annotations:
+        summary: "K2A Agent high memory usage"
+        description: "K2A Agent memory usage is above 90%: {{ $value }}%"
+        
+    - alert: K2AHighCPUUsage
+      expr: rate(k2a_agent_cpu_usage_seconds_total[5m]) > 0.8
+      for: 5m
+      labels:
+        severity: warning
+        service: k2a-monitoring
+      annotations:
+        summary: "K2A Agent high CPU usage"
+        description: "K2A Agent CPU usage is above 80%: {{ $value }}%"
+        
+  - name: k2a.cluster.health
+    interval: 60s
+    rules:
+    - alert: ClusterNodeNotReady
+      expr: k2a_cluster_node_status{status!="Ready"} == 1
+      for: 3m
+      labels:
+        severity: critical
+        component: cluster
+      annotations:
+        summary: "Cluster node is not ready"
+        description: "Node {{ $labels.node }} is not in Ready status for more than 3 minutes"
+        
+    - alert: ClusterHighPodRestarts
+      expr: increase(k2a_pod_restart_total[1h]) > 10
+      for: 0m
+      labels:
+        severity: warning
+        component: cluster
+      annotations:
+        summary: "High pod restart rate detected"
+        description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} has restarted {{ $value }} times in the last hour"

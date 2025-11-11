@@ -1,0 +1,15 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: k2a-monitoring-binding
+  labels:
+    app: k2a-monitoring
+    component: rbac
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: k2a-monitoring-reader
+subjects:
+- kind: ServiceAccount
+  name: k2a-monitoring-sa
+  namespace: k2a-monitoring

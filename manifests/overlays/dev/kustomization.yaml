@@ -1,0 +1,52 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: k2a-monitoring-dev
+
+namespace: k2a-monitoring-dev
+
+resources:
+- ../../base
+
+namePrefix: dev-
+
+commonLabels:
+  environment: development
+  
+patches:
+- patch: |-
+    - op: replace
+      path: /metadata/name
+      value: k2a-monitoring-dev
+  target:
+    kind: Namespace
+    name: k2a-monitoring
+
+- patch: |-
+    - op: replace
+      path: /spec/replicas
+      value: 1
+  target:
+    kind: Deployment
+    name: k2a-monitoring-agent
+
+- patch: |-
+    - op: replace
+      path: /spec/template/spec/containers/0/env/1/value
+      value: development
+  target:
+    kind: Deployment
+    name: k2a-monitoring-agent
+
+- patch: |-
+    - op: replace
+      path: /spec/template/spec/containers/0/env/2/value
+      value: debug
+  target:
+    kind: Deployment
+    name: k2a-monitoring-agent
+
+images:
+- name: quay.io/k2a/monitoring-agent
+  newTag: v1.0.0-dev
