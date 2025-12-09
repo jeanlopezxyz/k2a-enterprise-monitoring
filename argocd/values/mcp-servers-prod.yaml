@@ -1,6 +1,17 @@
 # Production values for MCP Servers
 # Environment: OpenShift with internal monitoring
 
+# Enable Network Policy for production
+networkPolicy:
+  enabled: true
+
+# Enable monitoring for production
+monitoring:
+  serviceMonitor:
+    enabled: false  # Enable if MCP servers expose /metrics
+    path: /metrics
+    interval: 30s
+
 servers:
   prometheus:
     enabled: true

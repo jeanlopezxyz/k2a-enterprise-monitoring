@@ -52,5 +52,17 @@ serverDefaults:
   build:
     enabled: false
 
+# Network Policy
+networkPolicy:
+  enabled: false
+
+# Monitoring
+monitoring:
+  serviceMonitor:
+    enabled: false
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+
 # MCP Servers - override in environment values
 servers: {}

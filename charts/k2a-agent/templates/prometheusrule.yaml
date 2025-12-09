@@ -1,0 +1,48 @@
+{{- if .Values.monitoring.prometheusRule.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ .Values.agent.name }}-rules
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "k2a-agent.labels" . | nindent 4 }}
+spec:
+  groups:
+    - name: k2a-agent.rules
+      rules:
+        - alert: K2AAgentDown
+          expr: up{job="{{ .Values.agent.name }}"} == 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "K2A Agent is down"
+            description: "K2A Agent {{ "{{ $labels.instance }}" }} has been down for more than 5 minutes."
+
+        - alert: K2AHighMemoryUsage
+          expr: container_memory_usage_bytes{container="{{ .Values.agent.name }}"} / container_spec_memory_limit_bytes{container="{{ .Values.agent.name }}"} > 0.9
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "K2A Agent high memory usage"
+            description: "K2A Agent memory usage is above 90% for more than 5 minutes."
+
+        - alert: K2AHighCPUUsage
+          expr: rate(container_cpu_usage_seconds_total{container="{{ .Values.agent.name }}"}[5m]) > 0.9
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "K2A Agent high CPU usage"
+            description: "K2A Agent CPU usage is above 90% for more than 5 minutes."
+
+        - alert: K2AMCPServerUnavailable
+          expr: mcp_server_available == 0
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "MCP Server unavailable"
+            description: "MCP Server {{ "{{ $labels.server }}" }} is unavailable for more than 2 minutes."
+{{- end }}

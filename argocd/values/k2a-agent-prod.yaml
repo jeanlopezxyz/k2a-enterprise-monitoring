@@ -1,6 +1,26 @@
 # Production values for K2A Agent
 # Environment: OpenShift with kagent operator
 
+# Enable Network Policy for production
+networkPolicy:
+  enabled: true
+
+# Enable monitoring for production
+monitoring:
+  serviceMonitor:
+    enabled: false  # Enable if agent exposes /metrics
+  prometheusRule:
+    enabled: true
+
+# Production autoscaling (disabled for kagent-managed agent)
+autoscaling:
+  enabled: false
+
+# Pod Disruption Budget for production
+podDisruptionBudget:
+  enabled: false  # kagent manages the deployment
+  minAvailable: 1
+
 agent:
   name: k2a-enterprise-monitoring
   modelConfig: default-model-config
