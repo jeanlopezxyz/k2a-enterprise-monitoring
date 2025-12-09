@@ -10,6 +10,5 @@ metadata:
     {{- include "k2a-agent.labels" $ | nindent 4 }}
 spec:
   url: {{ $server.url | quote }}
-  transport: {{ $server.transport }}
 {{- end }}
 {{- end }}
