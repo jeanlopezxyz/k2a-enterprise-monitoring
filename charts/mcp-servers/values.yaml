@@ -62,9 +62,9 @@ servers:
     # ImageStream (required for internal registry images)
     imageStream:
       enabled: true
-    # BuildConfig for OpenShift (disabled - images already built)
+    # BuildConfig for OpenShift
     build:
-      enabled: false
+      enabled: true
       gitUri: https://github.com/jeanlopezxyz/k2a-enterprise-monitoring.git
       gitRef: main
       contextDir: src/prometheus-mcp
@@ -103,7 +103,7 @@ servers:
     imageStream:
       enabled: true
     build:
-      enabled: false
+      enabled: true
       gitUri: https://github.com/jeanlopezxyz/k2a-enterprise-monitoring.git
       gitRef: main
       contextDir: src/alertmanager-mcp
@@ -142,7 +142,7 @@ servers:
     imageStream:
       enabled: true
     build:
-      enabled: false
+      enabled: true
       gitUri: https://github.com/jeanlopezxyz/k2a-enterprise-monitoring.git
       gitRef: main
       contextDir: src/redhat-cases-mcp
