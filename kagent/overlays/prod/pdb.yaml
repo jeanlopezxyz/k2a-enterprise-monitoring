@@ -1,0 +1,31 @@
+# PodDisruptionBudget for Production
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: k2a-kagent-controller-pdb
+  namespace: k2a-monitoring-prod
+  labels:
+    app.kubernetes.io/name: k2a-monitoring
+    app.kubernetes.io/component: controller
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: kagent
+      app.kubernetes.io/component: controller
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: k2a-kagent-ui-pdb
+  namespace: k2a-monitoring-prod
+  labels:
+    app.kubernetes.io/name: k2a-monitoring
+    app.kubernetes.io/component: ui
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: kagent
+      app.kubernetes.io/component: ui

@@ -1,0 +1,26 @@
+# Kustomization for all MCP Servers
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: k2a-mcp-servers
+
+resources:
+  # Namespace (from kubernetes-mcp)
+  - kubernetes-mcp/deployment.yaml
+  # Official MCPs
+  - slack-mcp/deployment.yaml
+  # Custom MCPs
+  - prometheus-mcp/deployment.yaml
+  - alertmanager-mcp/deployment.yaml
+  - redhat-cases-mcp/deployment.yaml
+
+commonLabels:
+  app.kubernetes.io/part-of: k2a-enterprise-monitoring
+  app.kubernetes.io/managed-by: kustomize
+
+# Images to potentially override
+images:
+  - name: quay.io/containers/kubernetes_mcp_server
+    newTag: latest
+  - name: ghcr.io/korotovsky/slack-mcp-server
+    newTag: latest

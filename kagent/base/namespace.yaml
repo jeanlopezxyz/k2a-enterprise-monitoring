@@ -1,0 +1,17 @@
+# K2A Monitoring Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: k2a-monitoring
+  labels:
+    app.kubernetes.io/name: k2a-monitoring
+    app.kubernetes.io/part-of: k2a-enterprise
+    # Pod Security Standards
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
+    # OpenShift labels
+    openshift.io/cluster-monitoring: "true"
+  annotations:
+    openshift.io/description: "K2A Enterprise Monitoring with AI-powered auto-remediation"
+    openshift.io/display-name: "K2A Monitoring"

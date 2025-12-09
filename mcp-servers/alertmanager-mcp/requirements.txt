@@ -1,0 +1,21 @@
+# FastMCP - Python MCP Framework with HTTP support
+fastmcp>=2.0.0
+
+# HTTP client
+httpx>=0.27.0
+aiohttp>=3.9.0
+
+# Data handling
+pydantic>=2.0.0
+
+# Async utilities
+anyio>=4.0.0
+
+# Logging
+structlog>=24.0.0
+
+# Environment configuration
+python-dotenv>=1.0.0
+
+# Date/time handling
+python-dateutil>=2.8.0

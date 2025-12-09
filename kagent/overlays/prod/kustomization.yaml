@@ -1,0 +1,64 @@
+# K2A Enterprise Monitoring - Production Environment
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: k2a-kagent-prod
+
+namespace: k2a-monitoring-prod
+
+# Inherit from base
+resources:
+  - ../../base
+  - pdb.yaml
+  - hpa.yaml
+
+# Production-specific labels
+commonLabels:
+  environment: prod
+
+# Patches for production
+patches:
+  # Override namespace
+  - patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: k2a-monitoring-prod
+    target:
+      kind: Namespace
+
+  # Production resource limits
+  - patch: |-
+      - op: replace
+        path: /spec/values/k2aAgent/resources/requests/cpu
+        value: "500m"
+      - op: replace
+        path: /spec/values/k2aAgent/resources/requests/memory
+        value: "1Gi"
+      - op: replace
+        path: /spec/values/k2aAgent/resources/limits/cpu
+        value: "4"
+      - op: replace
+        path: /spec/values/k2aAgent/resources/limits/memory
+        value: "4Gi"
+    target:
+      kind: HelmChart
+      name: kagent
+
+# ConfigMap overrides
+configMapGenerator:
+  - name: k2a-agent-config
+    behavior: merge
+    literals:
+      - ENVIRONMENT=prod
+      - LOG_LEVEL=info
+      - AUTO_REMEDIATE=true
+      - REQUIRE_APPROVAL=false  # Auto-remediate low-risk actions
+      - REQUIRE_APPROVAL_HIGH_RISK=true  # Require approval for high-risk
+
+# Replicas for production (HA)
+replicas:
+  - name: k2a-kagent-controller
+    count: 3
+  - name: k2a-kagent-ui
+    count: 3

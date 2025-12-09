@@ -1,0 +1,160 @@
+# Red Hat Cases MCP Server Deployment for OpenShift
+# Custom K2A implementation for KB search and case management
+apiVersion: v1
+kind: Secret
+metadata:
+  name: redhat-cases-mcp-secrets
+  namespace: k2a-mcp-servers
+  labels:
+    app.kubernetes.io/name: redhat-cases-mcp
+    app.kubernetes.io/part-of: k2a-enterprise-monitoring
+type: Opaque
+stringData:
+  # Red Hat API Token (direct token authentication)
+  REDHAT_API_TOKEN: ""
+  # Alternative: Offline token for SSO authentication
+  # Get from: https://access.redhat.com/management/api
+  REDHAT_OFFLINE_TOKEN: ""
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: redhat-cases-mcp-config
+  namespace: k2a-mcp-servers
+  labels:
+    app.kubernetes.io/name: redhat-cases-mcp
+    app.kubernetes.io/part-of: k2a-enterprise-monitoring
+data:
+  REDHAT_API_URL: "https://api.access.redhat.com"
+  KB_SEARCH_ENABLED: "true"
+  CASE_CREATION_ENABLED: "true"
+  CASE_DEFAULT_SEVERITY: "3"
+  CASE_DEFAULT_PRODUCT: "OpenShift Container Platform"
+  LOG_LEVEL: "info"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redhat-cases-mcp
+  namespace: k2a-mcp-servers
+  labels:
+    app.kubernetes.io/name: redhat-cases-mcp
+    app.kubernetes.io/part-of: k2a-enterprise-monitoring
+    app.kubernetes.io/component: mcp-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: redhat-cases-mcp
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: redhat-cases-mcp
+        app.kubernetes.io/part-of: k2a-enterprise-monitoring
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: redhat-cases-mcp
+          # TODO: Update with your container registry
+          image: image-registry.openshift-image-registry.svc:5000/k2a-mcp-servers/redhat-cases-mcp:latest
+          imagePullPolicy: Always
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            runAsNonRoot: true
+          ports:
+            - containerPort: 8000
+              name: http
+              protocol: TCP
+          command:
+            - python
+            - -m
+            - redhat_cases_mcp
+          args:
+            - --transport
+            - streamable-http
+            - --port
+            - "8000"
+          envFrom:
+            - configMapRef:
+                name: redhat-cases-mcp-config
+            - secretRef:
+                name: redhat-cases-mcp-secrets
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redhat-cases-mcp
+  namespace: k2a-mcp-servers
+  labels:
+    app.kubernetes.io/name: redhat-cases-mcp
+    app.kubernetes.io/part-of: k2a-enterprise-monitoring
+spec:
+  selector:
+    app.kubernetes.io/name: redhat-cases-mcp
+  ports:
+    - port: 8000
+      targetPort: 8000
+      protocol: TCP
+      name: http
+  type: ClusterIP
+---
+# BuildConfig para construir la imagen en OpenShift
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: redhat-cases-mcp
+  namespace: k2a-mcp-servers
+  labels:
+    app.kubernetes.io/name: redhat-cases-mcp
+    app.kubernetes.io/part-of: k2a-enterprise-monitoring
+spec:
+  source:
+    type: Git
+    git:
+      uri: https://github.com/YOUR_ORG/k2a-enterprise-monitoring.git
+      ref: main
+    contextDir: mcp-servers/redhat-cases-mcp
+  strategy:
+    type: Docker
+    dockerStrategy:
+      dockerfilePath: Dockerfile
+  output:
+    to:
+      kind: ImageStreamTag
+      name: redhat-cases-mcp:latest
+  triggers:
+    - type: ConfigChange
+---
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: redhat-cases-mcp
+  namespace: k2a-mcp-servers
+  labels:
+    app.kubernetes.io/name: redhat-cases-mcp
+    app.kubernetes.io/part-of: k2a-enterprise-monitoring

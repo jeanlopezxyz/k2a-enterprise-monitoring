@@ -1,0 +1,64 @@
+# K2A Enterprise Monitoring - Development Environment
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: k2a-kagent-dev
+
+namespace: k2a-monitoring-dev
+
+# Inherit from base
+resources:
+  - ../../base
+
+# Development-specific labels
+commonLabels:
+  environment: dev
+
+# Name suffix for dev resources
+nameSuffix: -dev
+
+# Patches for development
+patches:
+  # Override namespace
+  - patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: k2a-monitoring-dev
+    target:
+      kind: Namespace
+
+  # Development values patch
+  - patch: |-
+      - op: add
+        path: /spec/values/controller/logLevel
+        value: debug
+      - op: add
+        path: /spec/values/ui/replicas
+        value: 1
+      - op: add
+        path: /spec/values/k2aAgent/resources/requests/cpu
+        value: "100m"
+      - op: add
+        path: /spec/values/k2aAgent/resources/requests/memory
+        value: "256Mi"
+    target:
+      kind: HelmChart
+      name: kagent
+
+# ConfigMap overrides
+configMapGenerator:
+  - name: k2a-agent-config
+    behavior: merge
+    literals:
+      - ENVIRONMENT=dev
+      - LOG_LEVEL=debug
+      - AUTO_REMEDIATE=false
+      - REQUIRE_APPROVAL=true
+
+# Replicas patch
+replicas:
+  - name: k2a-kagent-controller
+    count: 1
+  - name: k2a-kagent-ui
+    count: 1

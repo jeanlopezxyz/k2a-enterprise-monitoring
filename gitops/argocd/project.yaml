@@ -1,0 +1,159 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: k2a-monitoring
+  namespace: openshift-gitops
+  labels:
+    app.kubernetes.io/name: k2a-monitoring
+    app.kubernetes.io/part-of: k2a-enterprise
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  description: K2A Enterprise Monitoring Platform - Multi-environment deployment
+
+  # Source repositories allowed for this project
+  sourceRepos:
+    - 'https://github.com/your-org/k2a-enterprise-monitoring.git'
+    - 'git@github.com:your-org/k2a-enterprise-monitoring.git'
+
+  # Destination clusters and namespaces
+  destinations:
+    # Development environment
+    - namespace: k2a-monitoring-dev
+      server: https://kubernetes.default.svc
+      name: in-cluster
+    # Staging environment
+    - namespace: k2a-monitoring-staging
+      server: https://kubernetes.default.svc
+      name: in-cluster
+    # Production environment
+    - namespace: k2a-monitoring-prod
+      server: https://kubernetes.default.svc
+      name: in-cluster
+    # Allow cluster-scoped resources
+    - namespace: '*'
+      server: https://kubernetes.default.svc
+      name: in-cluster
+
+  # Cluster-scoped resources that can be managed
+  clusterResourceWhitelist:
+    - group: ''
+      kind: Namespace
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRole
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRoleBinding
+    - group: security.openshift.io
+      kind: SecurityContextConstraints
+    - group: monitoring.coreos.com
+      kind: PrometheusRule
+    - group: monitoring.coreos.com
+      kind: ServiceMonitor
+
+  # Namespace-scoped resources that can be managed
+  namespaceResourceWhitelist:
+    - group: ''
+      kind: ConfigMap
+    - group: ''
+      kind: Secret
+    - group: ''
+      kind: Service
+    - group: ''
+      kind: ServiceAccount
+    - group: apps
+      kind: Deployment
+    - group: networking.k8s.io
+      kind: NetworkPolicy
+    - group: route.openshift.io
+      kind: Route
+    - group: autoscaling
+      kind: HorizontalPodAutoscaler
+    - group: policy
+      kind: PodDisruptionBudget
+    - group: monitoring.coreos.com
+      kind: ServiceMonitor
+    - group: monitoring.coreos.com
+      kind: PrometheusRule
+
+  # Roles for project access
+  roles:
+    # Admin role - full access
+    - name: admin
+      description: Full access to K2A monitoring project
+      policies:
+        - p, proj:k2a-monitoring:admin, applications, *, k2a-monitoring/*, allow
+        - p, proj:k2a-monitoring:admin, clusters, get, *, allow
+        - p, proj:k2a-monitoring:admin, repositories, *, *, allow
+        - p, proj:k2a-monitoring:admin, logs, get, k2a-monitoring/*, allow
+        - p, proj:k2a-monitoring:admin, exec, create, k2a-monitoring/*, allow
+      groups:
+        - k2a-admins
+        - platform-team
+
+    # Developer role - read + sync for dev/staging
+    - name: developer
+      description: Developer access - can sync dev and staging
+      policies:
+        - p, proj:k2a-monitoring:developer, applications, get, k2a-monitoring/*, allow
+        - p, proj:k2a-monitoring:developer, applications, sync, k2a-monitoring/k2a-monitoring-dev, allow
+        - p, proj:k2a-monitoring:developer, applications, sync, k2a-monitoring/k2a-monitoring-staging, allow
+        - p, proj:k2a-monitoring:developer, logs, get, k2a-monitoring/*, allow
+      groups:
+        - k2a-developers
+
+    # Viewer role - read only
+    - name: viewer
+      description: Read-only access to all environments
+      policies:
+        - p, proj:k2a-monitoring:viewer, applications, get, k2a-monitoring/*, allow
+        - p, proj:k2a-monitoring:viewer, logs, get, k2a-monitoring/*, allow
+      groups:
+        - k2a-viewers
+
+  # Sync windows for controlled deployments
+  syncWindows:
+    # Allow dev syncs anytime
+    - kind: allow
+      schedule: '* * * * *'
+      duration: 24h
+      applications:
+        - k2a-monitoring-dev
+      manualSync: true
+
+    # Staging: business hours only
+    - kind: allow
+      schedule: '0 8 * * 1-5'
+      duration: 10h
+      timeZone: America/New_York
+      applications:
+        - k2a-monitoring-staging
+      manualSync: true
+
+    # Production: maintenance windows only (Tue/Thu 2-4 AM)
+    - kind: allow
+      schedule: '0 2 * * 2,4'
+      duration: 2h
+      timeZone: America/New_York
+      applications:
+        - k2a-monitoring-prod
+      manualSync: true
+
+    # Deny production auto-sync outside maintenance windows
+    - kind: deny
+      schedule: '* * * * *'
+      duration: 24h
+      applications:
+        - k2a-monitoring-prod
+      manualSync: false
+
+  # Signature keys for signed commits (optional)
+  # signatureKeys:
+  #   - keyID: ABC123DEF456
+
+  # Orphaned resources monitoring
+  orphanedResources:
+    warn: true
+    ignore:
+      - group: ''
+        kind: ConfigMap
+        name: kube-root-ca.crt
