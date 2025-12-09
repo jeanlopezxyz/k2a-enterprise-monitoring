@@ -59,6 +59,9 @@ servers:
         path: /mcp
         initialDelaySeconds: 10
         periodSeconds: 30
+    # ImageStream (required for internal registry images)
+    imageStream:
+      enabled: true
     # BuildConfig for OpenShift (disabled - images already built)
     build:
       enabled: false
@@ -97,6 +100,8 @@ servers:
         path: /mcp
         initialDelaySeconds: 10
         periodSeconds: 30
+    imageStream:
+      enabled: true
     build:
       enabled: false
       gitUri: https://github.com/jeanlopezxyz/k2a-enterprise-monitoring.git
@@ -134,6 +139,8 @@ servers:
         path: /mcp
         initialDelaySeconds: 10
         periodSeconds: 30
+    imageStream:
+      enabled: true
     build:
       enabled: false
       gitUri: https://github.com/jeanlopezxyz/k2a-enterprise-monitoring.git

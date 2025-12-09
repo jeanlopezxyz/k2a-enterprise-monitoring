@@ -125,8 +125,7 @@ spec:
       targetPort: {{ $server.port }}
       name: http
   type: ClusterIP
-{{- if $server.build }}
-{{- if $server.build.enabled }}
+{{- if or ($server.imageStream).enabled ($server.build).enabled }}
 ---
 # ImageStream for {{ $server.name }}
 apiVersion: image.openshift.io/v1
@@ -139,6 +138,9 @@ metadata:
     {{- with $.Values.common.labels }}
     {{- toYaml . | nindent 4 }}
     {{- end }}
+{{- end }}
+{{- if $server.build }}
+{{- if $server.build.enabled }}
 ---
 # BuildConfig for {{ $server.name }}
 apiVersion: build.openshift.io/v1
