@@ -92,14 +92,12 @@ spec:
             {{- toYaml $server.resources | nindent 12 }}
           {{- if $server.probes }}
           livenessProbe:
-            httpGet:
-              path: {{ $server.probes.liveness.path }}
+            tcpSocket:
               port: {{ $server.port }}
             initialDelaySeconds: {{ $server.probes.liveness.initialDelaySeconds }}
             periodSeconds: {{ $server.probes.liveness.periodSeconds }}
           readinessProbe:
-            httpGet:
-              path: {{ $server.probes.readiness.path }}
+            tcpSocket:
               port: {{ $server.port }}
             initialDelaySeconds: {{ $server.probes.readiness.initialDelaySeconds }}
             periodSeconds: {{ $server.probes.readiness.periodSeconds }}
