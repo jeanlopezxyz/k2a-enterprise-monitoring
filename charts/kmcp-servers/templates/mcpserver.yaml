@@ -1,0 +1,146 @@
+# =============================================================================
+# MCPServer CRD Resources (kagent.dev/v1alpha1)
+# =============================================================================
+#
+# kmcp controller gestiona el ciclo de vida completo:
+#   - Deployment del container (con Transport Adapter para stdio)
+#   - Service para acceso HTTP/SSE
+#   - ServiceAccount con annotations (IRSA, Workload Identity, etc.)
+#
+# Referencia: docs/KMCP-GUIA-CONFIGURACION.md
+#
+# =============================================================================
+
+{{- range $key, $server := .Values.servers }}
+{{- if $server.enabled }}
+---
+apiVersion: kagent.dev/v1alpha1
+kind: MCPServer
+metadata:
+  name: {{ $server.name }}
+  namespace: {{ $.Values.global.namespace }}
+  labels:
+    app.kubernetes.io/name: {{ $server.name }}
+    app.kubernetes.io/component: kmcp-server
+    app.kubernetes.io/managed-by: {{ $.Release.Service }}
+    app.kubernetes.io/instance: {{ $server.name }}
+    {{- with $.Values.common.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+    {{- with $server.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- if or $server.description $server.annotations }}
+  annotations:
+    {{- if $server.description }}
+    description: {{ $server.description | quote }}
+    {{- end }}
+    {{- with $server.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- end }}
+spec:
+  # ============================================
+  # TRANSPORT TYPE: stdio (default) or http
+  # ============================================
+  # stdio: kmcp despliega Transport Adapter automaticamente
+  # http: MCP server expone HTTP nativo (sin adapter)
+  transportType: {{ $server.transportType | default "stdio" }}
+
+  # ============================================
+  # DEPLOYMENT CONFIGURATION
+  # ============================================
+  deployment:
+    # Imagen del MCP server
+    image: {{ $server.image.repository }}:{{ $server.image.tag | default "latest" }}
+
+    # Puerto del MCP server (default: 3000 para stdio con adapter)
+    port: {{ $server.port | default 3000 }}
+
+    {{- if $server.cmd }}
+    # Comando a ejecutar
+    cmd: {{ $server.cmd }}
+    {{- end }}
+
+    {{- if $server.args }}
+    # Argumentos del comando
+    args:
+      {{- toYaml $server.args | nindent 6 }}
+    {{- end }}
+
+    {{- if $server.env }}
+    # Variables de entorno
+    env:
+      {{- range $envKey, $envValue := $server.env }}
+      - name: {{ $envKey }}
+        value: {{ $envValue | quote }}
+      {{- end }}
+    {{- end }}
+
+    {{- if $server.secretRefs }}
+    # Referencias a Secrets (montados como volumenes)
+    secretRefs:
+      {{- range $server.secretRefs }}
+      - name: {{ . }}
+      {{- end }}
+    {{- end }}
+
+    {{- if $server.configMapRefs }}
+    # Referencias a ConfigMaps (montados como volumenes)
+    configMapRefs:
+      {{- range $server.configMapRefs }}
+      - name: {{ . }}
+      {{- end }}
+    {{- end }}
+
+    {{- if $server.volumes }}
+    # Volumenes personalizados
+    volumes:
+      {{- toYaml $server.volumes | nindent 6 }}
+    {{- end }}
+
+    {{- if $server.volumeMounts }}
+    # Montajes de volumenes
+    volumeMounts:
+      {{- toYaml $server.volumeMounts | nindent 6 }}
+    {{- end }}
+
+    {{- if $server.resources }}
+    # Recursos (CPU/Memory)
+    resources:
+      {{- toYaml $server.resources | nindent 6 }}
+    {{- end }}
+
+    {{- if $server.serviceAccount }}
+    # ServiceAccount con annotations (IRSA, Workload Identity, etc.)
+    serviceAccount:
+      {{- if $server.serviceAccount.annotations }}
+      annotations:
+        {{- toYaml $server.serviceAccount.annotations | nindent 8 }}
+      {{- end }}
+      {{- if $server.serviceAccount.labels }}
+      labels:
+        {{- toYaml $server.serviceAccount.labels | nindent 8 }}
+      {{- end }}
+    {{- end }}
+
+  # ============================================
+  # TRANSPORT CONFIGURATION
+  # ============================================
+  {{- if eq ($server.transportType | default "stdio") "stdio" }}
+  # Stdio Transport: kmcp despliega Transport Adapter automaticamente
+  # El adapter convierte stdio a HTTP/SSE en puerto 3000
+  stdioTransport: {}
+  {{- end }}
+
+  {{- if eq $server.transportType "http" }}
+  # HTTP Transport: MCP server expone HTTP nativo
+  httpTransport:
+    targetPort: {{ $server.httpTransport.targetPort | default $server.port | default 8080 }}
+    {{- if $server.httpTransport.path }}
+    path: {{ $server.httpTransport.path }}
+    {{- end }}
+  {{- end }}
+
+{{- end }}
+{{- end }}

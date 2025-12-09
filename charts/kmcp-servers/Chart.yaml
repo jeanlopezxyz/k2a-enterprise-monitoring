@@ -1,0 +1,38 @@
+# =============================================================================
+# kmcp-servers - MCP Servers para K2A Enterprise Monitoring
+# =============================================================================
+#
+# Este chart despliega MCP servers usando el CRD MCPServer de kmcp.
+# kmcp gestiona el ciclo de vida de los servers con transporte stdio.
+#
+# Prerequisitos:
+#   - kmcp operator instalado (CRD: kagent.dev/MCPServer)
+#   - kagent operator instalado (para Agent/RemoteMCPServer)
+#
+# =============================================================================
+
+apiVersion: v2
+name: kmcp-servers
+description: KMCP Servers for K2A Enterprise Monitoring (uses kmcp CRD)
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+
+keywords:
+  - kmcp
+  - mcp
+  - prometheus
+  - alertmanager
+  - monitoring
+  - kubernetes
+
+maintainers:
+  - name: Jean Lopez
+    url: https://github.com/jeanlopezxyz
+
+# Dependencies
+dependencies: []
+
+# Annotations
+annotations:
+  category: Monitoring

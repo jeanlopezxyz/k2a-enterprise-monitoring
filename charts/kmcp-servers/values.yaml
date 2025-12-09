@@ -1,0 +1,273 @@
+# =============================================================================
+# kmcp-servers Helm Values
+# =============================================================================
+#
+# Este chart despliega MCP servers usando el CRD MCPServer de kmcp.
+# kmcp controller gestiona automaticamente:
+#   - Deployment (con Transport Adapter para stdio o HTTP nativo)
+#   - Service (ClusterIP)
+#   - ServiceAccount (con annotations para IRSA, Workload Identity, etc.)
+#
+# NOTA: Las imagenes son Quarkus Native desde GitHub Container Registry.
+#       Los Secrets y ConfigMaps se crean por separado.
+#
+# Prerequisitos:
+#   - kmcp operator instalado (namespace: kmcp-system)
+#   - CRD kagent.dev/MCPServer disponible
+#   - Secrets creados en el namespace k2a-mcp-servers
+#
+# Referencia: docs/KMCP-GUIA-CONFIGURACION.md
+#
+# =============================================================================
+
+# ============================================
+# GLOBAL CONFIGURATION
+# ============================================
+global:
+  # Namespace donde se despliegan los MCPServers
+  namespace: k2a-mcp-servers
+
+# ============================================
+# COMMON LABELS
+# ============================================
+common:
+  labels:
+    app.kubernetes.io/part-of: k2a-enterprise-monitoring
+
+# ============================================
+# RBAC
+# ============================================
+rbac:
+  create: true
+  serviceAccount:
+    name: kmcp-servers
+    annotations: {}
+  clusterRoleBinding:
+    create: true
+    clusterRole: cluster-monitoring-view
+
+# ============================================
+# NAMESPACE
+# ============================================
+namespace:
+  create: true
+
+# ============================================
+# MCP SERVERS (Quarkus Native)
+# ============================================
+#
+# Cada server crea un MCPServer CR (Custom Resource).
+# El kmcp controller crea automaticamente:
+#   - Deployment con HTTP nativo (Quarkus expone /mcp)
+#   - Service ClusterIP
+#   - ServiceAccount
+#
+# IMPORTANTE: Los servidores Quarkus usan HTTP nativo (streamable-http),
+# por lo tanto se configura transportType: http
+#
+# ============================================
+
+servers:
+  # ------------------------------------------
+  # Prometheus MCP Server (Quarkus Native)
+  # ------------------------------------------
+  prometheus:
+    name: prometheus-mcp
+    enabled: true
+    description: "MCP Server para consultas PromQL a Prometheus/Thanos (Quarkus Native)"
+
+    # HTTP Transport (Quarkus MCP usa streamable-http nativo)
+    transportType: http
+
+    # Imagen Quarkus Native desde GitHub Container Registry
+    image:
+      repository: ghcr.io/jeanlopezxyz/mcp-prometheus
+      tag: "1.0.6"
+
+    # Puerto del servidor HTTP (Quarkus config)
+    port: 9081
+
+    # No se necesita cmd/args - el container usa ENTRYPOINT ["./application"]
+
+    # Variables de entorno
+    env:
+      PROMETHEUS_URL: "https://thanos-querier.openshift-monitoring.svc.cluster.local:9091"
+      QUARKUS_HTTP_HOST: "0.0.0.0"
+      QUARKUS_HTTP_PORT: "9081"
+
+    # HTTP Transport configuration
+    httpTransport:
+      targetPort: 9081
+      path: /mcp
+
+    # Recursos (native image usa menos memoria)
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "50m"
+      limits:
+        memory: "256Mi"
+        cpu: "500m"
+
+  # ------------------------------------------
+  # AlertManager MCP Server (Quarkus Native)
+  # ------------------------------------------
+  alertmanager:
+    name: alertmanager-mcp
+    enabled: true
+    description: "MCP Server para AlertManager (Quarkus Native)"
+
+    # HTTP Transport
+    transportType: http
+
+    # Imagen Quarkus Native desde GitHub Container Registry
+    image:
+      repository: ghcr.io/jeanlopezxyz/mcp-alertmanager
+      tag: "1.0.11"
+
+    # Puerto del servidor HTTP
+    port: 9082
+
+    # Variables de entorno
+    env:
+      ALERTMANAGER_URL: "https://alertmanager-main.openshift-monitoring.svc.cluster.local:9094"
+      QUARKUS_HTTP_HOST: "0.0.0.0"
+      QUARKUS_HTTP_PORT: "9082"
+
+    # HTTP Transport configuration
+    httpTransport:
+      targetPort: 9082
+      path: /mcp
+
+    # Recursos
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "50m"
+      limits:
+        memory: "256Mi"
+        cpu: "500m"
+
+  # ------------------------------------------
+  # Red Hat Cases MCP Server (Quarkus Native)
+  # ------------------------------------------
+  redhatCases:
+    name: redhat-cases-mcp
+    enabled: true
+    description: "MCP Server para Red Hat KB y casos de soporte (Quarkus Native)"
+
+    # HTTP Transport
+    transportType: http
+
+    # Imagen Quarkus Native desde GitHub Container Registry
+    image:
+      repository: ghcr.io/jeanlopezxyz/mcp-redhat-cases
+      tag: "1.0.3"
+
+    # Puerto del servidor HTTP
+    port: 9080
+
+    # Variables de entorno
+    env:
+      QUARKUS_HTTP_HOST: "0.0.0.0"
+      QUARKUS_HTTP_PORT: "9080"
+
+    # Secretos (referencia al Secret externo para REDHAT_TOKEN)
+    secretRefs:
+      - redhat-cases-mcp-secrets
+
+    # HTTP Transport configuration
+    httpTransport:
+      targetPort: 9080
+      path: /mcp
+
+    # Recursos
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "50m"
+      limits:
+        memory: "256Mi"
+        cpu: "500m"
+
+  # ------------------------------------------
+  # Sessionize MCP Server (Quarkus Native)
+  # ------------------------------------------
+  sessionize:
+    name: sessionize-mcp
+    enabled: true
+    description: "MCP Server para Sessionize - conferencias y eventos (Quarkus Native)"
+
+    # HTTP Transport
+    transportType: http
+
+    # Imagen Quarkus Native desde GitHub Container Registry
+    image:
+      repository: ghcr.io/jeanlopezxyz/mcp-sessionize
+      tag: "1.0.2"
+
+    # Puerto del servidor HTTP
+    port: 8080
+
+    # Variables de entorno
+    env:
+      QUARKUS_HTTP_HOST: "0.0.0.0"
+      QUARKUS_HTTP_PORT: "8080"
+      # Event ID opcional - puede configurarse por secret o env
+      # SESSIONIZE_EVENT_ID: ""
+
+    # HTTP Transport configuration
+    httpTransport:
+      targetPort: 8080
+      path: /mcp
+
+    # Recursos
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "50m"
+      limits:
+        memory: "256Mi"
+        cpu: "500m"
+
+# ============================================
+# SECRETS
+# ============================================
+#
+# Secrets para MCP servers que requieren autenticacion.
+# En produccion, usar external-secrets-operator.
+#
+secrets:
+  redhatCases:
+    # Crear el secret desde este chart (false = usar external-secrets)
+    create: false
+    # Red Hat API Token
+    # Obtener desde: https://access.redhat.com/management/api
+    apiToken: ""
+
+  sessionize:
+    # Crear el secret desde este chart (false = usar external-secrets)
+    create: false
+    # Sessionize Event ID (opcional si se configura por defecto)
+    eventId: ""
+
+# ============================================
+# INTEGRACION CON KAGENT
+# ============================================
+#
+# Despues de desplegar un MCPServer, conectarlo desde kagent
+# usando RemoteMCPServer en charts/kagent-app:
+#
+# Prometheus:
+#   url: http://prometheus-mcp.k2a-mcp-servers.svc.cluster.local:9081/mcp
+#
+# AlertManager:
+#   url: http://alertmanager-mcp.k2a-mcp-servers.svc.cluster.local:9082/mcp
+#
+# Red Hat Cases:
+#   url: http://redhat-cases-mcp.k2a-mcp-servers.svc.cluster.local:9080/mcp
+#
+# Sessionize:
+#   url: http://sessionize-mcp.k2a-mcp-servers.svc.cluster.local:8080/mcp
+#
+# ============================================

@@ -1,0 +1,317 @@
+# =============================================================================
+# K2A Production Values
+# =============================================================================
+#
+# Este archivo contiene la configuracion de produccion para:
+#   - MCP Servers (Quarkus Native: Prometheus, AlertManager, Red Hat Cases, Sessionize)
+#   - K2A Agent (Agente de IA)
+#
+# PREREQUISITO: Crear los secrets antes de desplegar
+#   kubectl create namespace kagent
+#   kubectl create secret generic kagent-openai-secret \
+#     --namespace kagent \
+#     --from-literal=api-key="sk-..."
+#
+# =============================================================================
+
+# =============================================================================
+# SECCION 1: MCP SERVERS (chart: kmcp-servers) - Quarkus Native
+# =============================================================================
+
+# Namespace para MCP Servers
+global:
+  namespace: k2a-mcp-servers
+
+servers:
+  # ------------------------------------------
+  # Prometheus MCP Server (Quarkus Native)
+  # ------------------------------------------
+  prometheus:
+    enabled: true
+    name: prometheus-mcp
+    description: "MCP Server para consultas PromQL a Prometheus/Thanos (Quarkus Native)"
+    transportType: http
+    image:
+      repository: ghcr.io/jeanlopezxyz/mcp-prometheus
+      tag: "1.0.6"
+    port: 9081
+    env:
+      PROMETHEUS_URL: "https://thanos-querier.openshift-monitoring.svc.cluster.local:9091"
+      QUARKUS_HTTP_HOST: "0.0.0.0"
+      QUARKUS_HTTP_PORT: "9081"
+    httpTransport:
+      targetPort: 9081
+      path: /mcp
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi
+
+  # ------------------------------------------
+  # AlertManager MCP Server (Quarkus Native)
+  # ------------------------------------------
+  alertmanager:
+    enabled: true
+    name: alertmanager-mcp
+    description: "MCP Server para AlertManager (Quarkus Native)"
+    transportType: http
+    image:
+      repository: ghcr.io/jeanlopezxyz/mcp-alertmanager
+      tag: "1.0.11"
+    port: 9082
+    env:
+      ALERTMANAGER_URL: "https://alertmanager-main.openshift-monitoring.svc.cluster.local:9094"
+      QUARKUS_HTTP_HOST: "0.0.0.0"
+      QUARKUS_HTTP_PORT: "9082"
+    httpTransport:
+      targetPort: 9082
+      path: /mcp
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi
+
+  # ------------------------------------------
+  # Red Hat Cases MCP Server (Quarkus Native)
+  # ------------------------------------------
+  redhatCases:
+    enabled: true
+    name: redhat-cases-mcp
+    description: "MCP Server para Red Hat KB y casos de soporte (Quarkus Native)"
+    transportType: http
+    image:
+      repository: ghcr.io/jeanlopezxyz/mcp-redhat-cases
+      tag: "1.0.3"
+    port: 9080
+    env:
+      QUARKUS_HTTP_HOST: "0.0.0.0"
+      QUARKUS_HTTP_PORT: "9080"
+    secretRefs:
+      - redhat-cases-mcp-secrets
+    httpTransport:
+      targetPort: 9080
+      path: /mcp
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi
+
+  # ------------------------------------------
+  # Sessionize MCP Server (Quarkus Native)
+  # ------------------------------------------
+  sessionize:
+    enabled: true
+    name: sessionize-mcp
+    description: "MCP Server para Sessionize - conferencias y eventos (Quarkus Native)"
+    transportType: http
+    image:
+      repository: ghcr.io/jeanlopezxyz/mcp-sessionize
+      tag: "1.0.2"
+    port: 8080
+    env:
+      QUARKUS_HTTP_HOST: "0.0.0.0"
+      QUARKUS_HTTP_PORT: "8080"
+      # SESSIONIZE_EVENT_ID: ""  # Configurar via secret o tool parameter
+    httpTransport:
+      targetPort: 8080
+      path: /mcp
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi
+
+# =============================================================================
+# SECCION 2: K2A AGENT (chart: kagent-app)
+# =============================================================================
+
+# ModelConfig - Configuracion del modelo LLM
+modelConfig:
+  create: true
+  name: k2a-model-config
+  provider: openai
+  model: gpt-4o
+  secretRef:
+    name: kagent-openai-secret
+    key: api-key
+  temperature: 0.7
+  maxTokens: 4096
+
+# Agent configuration
+agent:
+  name: k2a-enterprise-monitoring
+  namespace: kagent
+  modelConfig: k2a-model-config
+  systemMessage: |
+    You are K2A, an AI agent for Kubernetes enterprise monitoring.
+
+    Use your tools to:
+    - Query Prometheus metrics with prometheus_query, prometheus_query_range
+    - Check AlertManager alerts with alertmanager_alerts, alertmanager_alert_groups
+    - Search Red Hat Knowledge Base with kb_search, kb_get_article
+    - Manage support cases with case_create, case_get, case_list
+    - Get conference info with getSessions, getSpeakers, getSchedule
+
+    Always use the available tools to get real data before responding.
+    When asked about alerts, use alertmanager_alerts or prometheus_alerts.
+    When asked about metrics, use prometheus_query or prometheus_query_range.
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+
+# RemoteMCPServer definitions (conexiones del agente a los MCP servers)
+mcpServers:
+  prometheus:
+    enabled: true
+    name: prometheus-mcp-server
+    description: "Prometheus MCP server for querying metrics and alerts"
+    url: "http://prometheus-mcp.k2a-mcp-servers.svc.cluster.local:9081/mcp"
+    tools:
+      - prometheus_query
+      - prometheus_query_range
+      - prometheus_alerts
+      - prometheus_rules
+      - prometheus_targets
+      - prometheus_metadata
+      - prometheus_health
+      - prometheus_series
+
+  alertmanager:
+    enabled: true
+    name: alertmanager-mcp-server
+    description: "AlertManager MCP server for managing alerts and silences"
+    url: "http://alertmanager-mcp.k2a-mcp-servers.svc.cluster.local:9082/mcp"
+    tools:
+      - alertmanager_alerts
+      - alertmanager_alert_groups
+      - alertmanager_silences
+      - alertmanager_create_silence
+      - alertmanager_delete_silence
+      - alertmanager_silence_alert
+      - alertmanager_receivers
+      - alertmanager_status
+      - alertmanager_health
+
+  redhatCases:
+    enabled: true
+    name: redhat-cases-mcp-server
+    description: "Red Hat Cases MCP server for KB search and case management"
+    url: "http://redhat-cases-mcp.k2a-mcp-servers.svc.cluster.local:9080/mcp"
+    tools:
+      - kb_search
+      - kb_get_article
+      - case_create
+      - case_get
+      - case_add_comment
+      - case_list
+      - case_escalate
+      - redhat_health
+
+  sessionize:
+    enabled: true
+    name: sessionize-mcp-server
+    description: "Sessionize MCP server for conference and event data"
+    url: "http://sessionize-mcp.k2a-mcp-servers.svc.cluster.local:8080/mcp"
+    tools:
+      - getSpeakers
+      - findSpeaker
+      - getSessionsBySpeaker
+      - getSessions
+      - findSession
+      - getSchedule
+
+# A2A Skills
+a2aSkills:
+  - id: alert-monitoring
+    name: Alert Monitoring
+    description: Monitor and analyze alerts from Prometheus and AlertManager
+    examples:
+      - What alerts are currently firing?
+      - Show me critical alerts
+    tags:
+      - alerts
+      - monitoring
+    inputModes:
+      - text
+    outputModes:
+      - text
+
+  - id: metrics-analysis
+    name: Metrics Analysis
+    description: Query and analyze Prometheus metrics
+    examples:
+      - What is the CPU usage?
+      - Show memory usage
+    tags:
+      - metrics
+      - prometheus
+    inputModes:
+      - text
+    outputModes:
+      - text
+
+  - id: redhat-support
+    name: Red Hat Support
+    description: Search Red Hat KB and manage support cases
+    examples:
+      - Search for OOMKilled errors
+      - Create a support case
+    tags:
+      - redhat
+      - kb
+      - support
+    inputModes:
+      - text
+    outputModes:
+      - text
+
+  - id: conference-info
+    name: Conference Information
+    description: Get speakers, sessions and schedule from Sessionize events
+    examples:
+      - Who are the speakers at the conference?
+      - Find sessions about Kubernetes
+      - What's the schedule for today?
+    tags:
+      - conference
+      - sessionize
+      - speakers
+    inputModes:
+      - text
+    outputModes:
+      - text
+
+# =============================================================================
+# SECCION 3: CONFIGURACION COMPARTIDA
+# =============================================================================
+
+networkPolicy:
+  enabled: true
+
+monitoring:
+  serviceMonitor:
+    enabled: false
+  prometheusRule:
+    enabled: true
+
+autoscaling:
+  enabled: false
+
+podDisruptionBudget:
+  enabled: false
