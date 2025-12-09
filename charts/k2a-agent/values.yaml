@@ -37,8 +37,8 @@ mcpServers:
   prometheus:
     enabled: true
     name: prometheus-mcp-server
+    description: "Prometheus MCP server for querying metrics and alerts"
     url: "http://prometheus-mcp.k2a-mcp-servers.svc.cluster.local:8000/mcp"
-    transport: STREAMABLE_HTTP
     tools:
       - prometheus_query
       - prometheus_query_range
@@ -52,8 +52,8 @@ mcpServers:
   alertmanager:
     enabled: true
     name: alertmanager-mcp-server
+    description: "AlertManager MCP server for managing alerts and silences"
     url: "http://alertmanager-mcp.k2a-mcp-servers.svc.cluster.local:8000/mcp"
-    transport: STREAMABLE_HTTP
     tools:
       - alertmanager_alerts
       - alertmanager_alert_groups
@@ -68,8 +68,8 @@ mcpServers:
   redhatCases:
     enabled: true
     name: redhat-cases-mcp-server
+    description: "Red Hat Cases MCP server for KB search and case management"
     url: "http://redhat-cases-mcp.k2a-mcp-servers.svc.cluster.local:8000/mcp"
-    transport: STREAMABLE_HTTP
     tools:
       - kb_search
       - kb_get_article

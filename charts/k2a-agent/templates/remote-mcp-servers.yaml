@@ -10,5 +10,6 @@ metadata:
     {{- include "k2a-agent.labels" $ | nindent 4 }}
 spec:
   url: {{ $server.url | quote }}
+  description: {{ $server.description | default (printf "MCP Server for %s" $server.name) | quote }}
 {{- end }}
 {{- end }}
