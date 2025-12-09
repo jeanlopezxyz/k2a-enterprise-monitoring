@@ -37,3 +37,11 @@ spec:
       kind: '*'
     - group: image.openshift.io
       kind: '*'
+    - group: networking.k8s.io
+      kind: '*'
+    - group: monitoring.coreos.com
+      kind: '*'
+    - group: autoscaling
+      kind: '*'
+    - group: policy
+      kind: '*'
