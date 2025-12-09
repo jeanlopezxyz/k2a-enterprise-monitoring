@@ -52,13 +52,13 @@ servers:
         memory: 512Mi
     probes:
       liveness:
-        path: /health
+        path: /mcp
+        initialDelaySeconds: 30
+        periodSeconds: 60
+      readiness:
+        path: /mcp
         initialDelaySeconds: 10
         periodSeconds: 30
-      readiness:
-        path: /health
-        initialDelaySeconds: 5
-        periodSeconds: 10
     # BuildConfig for OpenShift (disabled - images already built)
     build:
       enabled: false
@@ -90,13 +90,13 @@ servers:
         memory: 512Mi
     probes:
       liveness:
-        path: /health
+        path: /mcp
+        initialDelaySeconds: 30
+        periodSeconds: 60
+      readiness:
+        path: /mcp
         initialDelaySeconds: 10
         periodSeconds: 30
-      readiness:
-        path: /health
-        initialDelaySeconds: 5
-        periodSeconds: 10
     build:
       enabled: false
       gitUri: https://github.com/jeanlopezxyz/k2a-enterprise-monitoring.git
@@ -127,13 +127,13 @@ servers:
         memory: 512Mi
     probes:
       liveness:
-        path: /health
+        path: /mcp
+        initialDelaySeconds: 30
+        periodSeconds: 60
+      readiness:
+        path: /mcp
         initialDelaySeconds: 10
         periodSeconds: 30
-      readiness:
-        path: /health
-        initialDelaySeconds: 5
-        periodSeconds: 10
     build:
       enabled: false
       gitUri: https://github.com/jeanlopezxyz/k2a-enterprise-monitoring.git
