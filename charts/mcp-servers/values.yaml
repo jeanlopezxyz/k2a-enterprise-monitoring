@@ -59,9 +59,9 @@ servers:
         path: /health
         initialDelaySeconds: 5
         periodSeconds: 10
-    # BuildConfig for OpenShift
+    # BuildConfig for OpenShift (disabled - images already built)
     build:
-      enabled: true
+      enabled: false
       gitUri: https://github.com/jeanlopezxyz/k2a-enterprise-monitoring.git
       gitRef: main
       contextDir: src/prometheus-mcp
@@ -98,7 +98,7 @@ servers:
         initialDelaySeconds: 5
         periodSeconds: 10
     build:
-      enabled: true
+      enabled: false
       gitUri: https://github.com/jeanlopezxyz/k2a-enterprise-monitoring.git
       gitRef: main
       contextDir: src/alertmanager-mcp
@@ -135,7 +135,7 @@ servers:
         initialDelaySeconds: 5
         periodSeconds: 10
     build:
-      enabled: true
+      enabled: false
       gitUri: https://github.com/jeanlopezxyz/k2a-enterprise-monitoring.git
       gitRef: main
       contextDir: src/redhat-cases-mcp
