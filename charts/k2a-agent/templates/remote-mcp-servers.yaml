@@ -1,0 +1,15 @@
+{{- range $key, $server := .Values.mcpServers }}
+{{- if $server.enabled }}
+---
+apiVersion: kagent.dev/v1alpha2
+kind: RemoteMCPServer
+metadata:
+  name: {{ $server.name }}
+  namespace: {{ $.Values.global.namespace }}
+  labels:
+    {{- include "k2a-agent.labels" $ | nindent 4 }}
+spec:
+  url: {{ $server.url | quote }}
+  transport: {{ $server.transport }}
+{{- end }}
+{{- end }}

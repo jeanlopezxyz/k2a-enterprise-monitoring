@@ -1,0 +1,39 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: k2a-enterprise-monitoring
+  namespace: openshift-gitops
+  labels:
+    app.kubernetes.io/part-of: k2a-enterprise-monitoring
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  description: K2A Enterprise Monitoring - AI-powered Kubernetes monitoring
+  sourceRepos:
+    - 'https://github.com/jeanlopezxyz/k2a-enterprise-monitoring.git'
+    - 'git@github.com:jeanlopezxyz/k2a-enterprise-monitoring.git'
+  destinations:
+    - namespace: k2a-mcp-servers
+      server: https://kubernetes.default.svc
+    - namespace: kagent
+      server: https://kubernetes.default.svc
+    - namespace: '*'
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: ''
+      kind: Namespace
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRole
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRoleBinding
+  namespaceResourceWhitelist:
+    - group: ''
+      kind: '*'
+    - group: apps
+      kind: '*'
+    - group: kagent.dev
+      kind: '*'
+    - group: build.openshift.io
+      kind: '*'
+    - group: image.openshift.io
+      kind: '*'

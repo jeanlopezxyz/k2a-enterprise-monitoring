@@ -1,0 +1,48 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: k2a-mcp-servers
+  namespace: openshift-gitops
+  labels:
+    app.kubernetes.io/part-of: k2a-enterprise-monitoring
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: k2a-enterprise-monitoring
+  source:
+    repoURL: 'https://github.com/jeanlopezxyz/k2a-enterprise-monitoring.git'
+    targetRevision: main
+    path: charts/mcp-servers
+    helm:
+      valueFiles:
+        - values.yaml
+      # Override values for production
+      # parameters:
+      #   - name: servers.redhatCases.secrets.REDHAT_API_OFFLINE_TOKEN
+      #     value: "your-token-here"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: k2a-mcp-servers
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas
+    - group: ''
+      kind: Secret
+      jsonPointers:
+        - /data

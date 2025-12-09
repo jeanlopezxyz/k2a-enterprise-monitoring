@@ -1,0 +1,174 @@
+{{- range $key, $server := .Values.servers }}
+{{- if $server.enabled }}
+---
+# ConfigMap for {{ $server.name }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $server.name }}-config
+  namespace: {{ $.Values.global.namespace }}
+  labels:
+    app.kubernetes.io/name: {{ $server.name }}
+    app.kubernetes.io/component: mcp-server
+    {{- with $.Values.common.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+data:
+  {{- range $configKey, $configValue := $server.config }}
+  {{ $configKey }}: {{ $configValue | quote }}
+  {{- end }}
+---
+{{- if $server.secrets }}
+# Secret for {{ $server.name }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $server.name }}-secrets
+  namespace: {{ $.Values.global.namespace }}
+  labels:
+    app.kubernetes.io/name: {{ $server.name }}
+    app.kubernetes.io/component: mcp-server
+type: Opaque
+stringData:
+  {{- range $secretKey, $secretValue := $server.secrets }}
+  {{ $secretKey }}: {{ $secretValue | quote }}
+  {{- end }}
+{{- end }}
+---
+# Deployment for {{ $server.name }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $server.name }}
+  namespace: {{ $.Values.global.namespace }}
+  labels:
+    app.kubernetes.io/name: {{ $server.name }}
+    app.kubernetes.io/component: mcp-server
+    {{- with $.Values.common.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  replicas: {{ $server.replicas | default 1 }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ $server.name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ $server.name }}
+        app.kubernetes.io/component: mcp-server
+        {{- with $.Values.common.labels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ $.Values.rbac.serviceAccountName }}
+      securityContext:
+        {{- toYaml $.Values.common.securityContext | nindent 8 }}
+      containers:
+        - name: {{ $server.name }}
+          image: {{ $.Values.global.imageRegistry }}/{{ $server.image.repository }}:{{ $server.image.tag | default "latest" }}
+          imagePullPolicy: {{ $server.image.pullPolicy | default "Always" }}
+          securityContext:
+            {{- toYaml $.Values.common.containerSecurityContext | nindent 12 }}
+          ports:
+            - containerPort: {{ $server.port }}
+              name: http
+          {{- if $server.command }}
+          command:
+            {{- toYaml $server.command | nindent 12 }}
+          {{- end }}
+          {{- if $server.args }}
+          args:
+            {{- toYaml $server.args | nindent 12 }}
+          {{- end }}
+          envFrom:
+            - configMapRef:
+                name: {{ $server.name }}-config
+            {{- if $server.secrets }}
+            - secretRef:
+                name: {{ $server.name }}-secrets
+            {{- end }}
+          resources:
+            {{- toYaml $server.resources | nindent 12 }}
+          {{- if $server.probes }}
+          livenessProbe:
+            httpGet:
+              path: {{ $server.probes.liveness.path }}
+              port: {{ $server.port }}
+            initialDelaySeconds: {{ $server.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ $server.probes.liveness.periodSeconds }}
+          readinessProbe:
+            httpGet:
+              path: {{ $server.probes.readiness.path }}
+              port: {{ $server.port }}
+            initialDelaySeconds: {{ $server.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ $server.probes.readiness.periodSeconds }}
+          {{- end }}
+---
+# Service for {{ $server.name }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $server.name }}
+  namespace: {{ $.Values.global.namespace }}
+  labels:
+    app.kubernetes.io/name: {{ $server.name }}
+    app.kubernetes.io/component: mcp-server
+    {{- with $.Values.common.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  selector:
+    app.kubernetes.io/name: {{ $server.name }}
+  ports:
+    - port: {{ $server.port }}
+      targetPort: {{ $server.port }}
+      name: http
+  type: ClusterIP
+{{- if $server.build }}
+{{- if $server.build.enabled }}
+---
+# ImageStream for {{ $server.name }}
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: {{ $server.name }}
+  namespace: {{ $.Values.global.namespace }}
+  labels:
+    app.kubernetes.io/name: {{ $server.name }}
+    {{- with $.Values.common.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+---
+# BuildConfig for {{ $server.name }}
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: {{ $server.name }}
+  namespace: {{ $.Values.global.namespace }}
+  labels:
+    app.kubernetes.io/name: {{ $server.name }}
+    {{- with $.Values.common.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  source:
+    type: Git
+    git:
+      uri: {{ $server.build.gitUri }}
+      ref: {{ $server.build.gitRef | default "main" }}
+    contextDir: {{ $server.build.contextDir }}
+  strategy:
+    type: Docker
+    dockerStrategy:
+      dockerfilePath: Dockerfile
+  output:
+    to:
+      kind: ImageStreamTag
+      name: {{ $server.name }}:{{ $server.image.tag | default "latest" }}
+  triggers:
+    - type: ConfigChange
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

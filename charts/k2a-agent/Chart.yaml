@@ -1,0 +1,14 @@
+apiVersion: v2
+name: k2a-agent
+description: K2A Enterprise Monitoring Agent for kagent
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - k2a
+  - kagent
+  - monitoring
+  - ai-agent
+maintainers:
+  - name: Jean Lopez
+    url: https://github.com/jeanlopezxyz

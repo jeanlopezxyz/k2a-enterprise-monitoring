@@ -1,0 +1,44 @@
+apiVersion: kagent.dev/v1alpha2
+kind: Agent
+metadata:
+  name: {{ .Values.agent.name }}
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "k2a-agent.labels" . | nindent 4 }}
+spec:
+  declarative:
+    modelConfig: {{ .Values.agent.modelConfig }}
+    systemMessage: |
+      {{- .Values.agent.systemMessage | nindent 6 }}
+    tools:
+    {{- range $key, $server := .Values.mcpServers }}
+    {{- if $server.enabled }}
+    - type: McpServer
+      mcpServer:
+        apiGroup: kagent.dev
+        kind: RemoteMCPServer
+        name: {{ $server.name }}
+        toolNames:
+        {{- range $server.tools }}
+        - {{ . }}
+        {{- end }}
+    {{- end }}
+    {{- end }}
+    a2aConfig:
+      skills:
+      {{- range .Values.a2aSkills }}
+      - id: {{ .id }}
+        name: {{ .name }}
+        description: {{ .description }}
+        examples:
+        {{- range .examples }}
+        - {{ . }}
+        {{- end }}
+        tags:
+        {{- range .tags }}
+        - {{ . }}
+        {{- end }}
+      {{- end }}
+    deployment:
+      resources:
+        {{- toYaml .Values.agent.resources | nindent 8 }}

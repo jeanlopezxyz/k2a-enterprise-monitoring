@@ -1,0 +1,15 @@
+apiVersion: v2
+name: mcp-servers
+description: MCP Servers for K2A Enterprise Monitoring
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - mcp
+  - prometheus
+  - alertmanager
+  - redhat
+  - monitoring
+maintainers:
+  - name: Jean Lopez
+    url: https://github.com/jeanlopezxyz
