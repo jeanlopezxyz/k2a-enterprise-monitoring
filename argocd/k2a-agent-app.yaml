@@ -16,6 +16,7 @@ spec:
     helm:
       valueFiles:
         - values.yaml
+        - ../../argocd/values/k2a-agent-prod.yaml
   destination:
     server: https://kubernetes.default.svc
     namespace: kagent

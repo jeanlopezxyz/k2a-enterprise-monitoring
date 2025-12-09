@@ -16,10 +16,7 @@ spec:
     helm:
       valueFiles:
         - values.yaml
-      # Override values for production
-      # parameters:
-      #   - name: servers.redhatCases.secrets.REDHAT_API_OFFLINE_TOKEN
-      #     value: "your-token-here"
+        - ../../argocd/values/mcp-servers-prod.yaml
   destination:
     server: https://kubernetes.default.svc
     namespace: k2a-mcp-servers

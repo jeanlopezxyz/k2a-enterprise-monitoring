@@ -1,29 +1,15 @@
 # Default values for k2a-agent chart
+# These are generic defaults - override in argocd/values/ for specific environments
 
 global:
   namespace: kagent
   mcpServersNamespace: k2a-mcp-servers
 
-# Agent configuration
+# Agent configuration defaults
 agent:
   name: k2a-enterprise-monitoring
   modelConfig: default-model-config
-
-  # System message for the agent
-  systemMessage: |
-    You are K2A, an AI agent for Kubernetes enterprise monitoring.
-
-    Use your tools to:
-    - Query Prometheus metrics with prometheus_query, prometheus_query_range
-    - Check AlertManager alerts with alertmanager_alerts, alertmanager_alert_groups
-    - Search Red Hat Knowledge Base with kb_search, kb_get_article
-    - Manage support cases with case_create, case_get, case_list
-
-    Always use the available tools to get real data before responding.
-    When asked about alerts, use alertmanager_alerts or prometheus_alerts.
-    When asked about metrics, use prometheus_query or prometheus_query_range.
-
-  # Resource limits for the agent pod
+  systemMessage: ""
   resources:
     requests:
       cpu: 100m
@@ -32,84 +18,11 @@ agent:
       cpu: 1000m
       memory: 1Gi
 
-# RemoteMCPServer definitions
-mcpServers:
-  prometheus:
-    enabled: true
-    name: prometheus-mcp-server
-    description: "Prometheus MCP server for querying metrics and alerts"
-    url: "http://prometheus-mcp.k2a-mcp-servers.svc.cluster.local:8000/mcp"
-    tools:
-      - prometheus_query
-      - prometheus_query_range
-      - prometheus_alerts
-      - prometheus_rules
-      - prometheus_targets
-      - prometheus_metadata
-      - prometheus_health
-      - prometheus_series
+# RemoteMCPServer definitions - override in environment values
+mcpServers: {}
 
-  alertmanager:
-    enabled: true
-    name: alertmanager-mcp-server
-    description: "AlertManager MCP server for managing alerts and silences"
-    url: "http://alertmanager-mcp.k2a-mcp-servers.svc.cluster.local:8000/mcp"
-    tools:
-      - alertmanager_alerts
-      - alertmanager_alert_groups
-      - alertmanager_silences
-      - alertmanager_create_silence
-      - alertmanager_delete_silence
-      - alertmanager_silence_alert
-      - alertmanager_receivers
-      - alertmanager_status
-      - alertmanager_health
-
-  redhatCases:
-    enabled: true
-    name: redhat-cases-mcp-server
-    description: "Red Hat Cases MCP server for KB search and case management"
-    url: "http://redhat-cases-mcp.k2a-mcp-servers.svc.cluster.local:8000/mcp"
-    tools:
-      - kb_search
-      - kb_get_article
-      - case_create
-      - case_get
-      - case_add_comment
-      - case_list
-      - case_escalate
-      - redhat_health
-
-# A2A Skills
-a2aSkills:
-  - id: alert-monitoring
-    name: Alert Monitoring
-    description: Monitor and analyze alerts from Prometheus and AlertManager
-    examples:
-      - What alerts are currently firing?
-      - Show me critical alerts
-    tags:
-      - alerts
-      - monitoring
-  - id: metrics-analysis
-    name: Metrics Analysis
-    description: Query and analyze Prometheus metrics
-    examples:
-      - What is the CPU usage?
-      - Show memory usage
-    tags:
-      - metrics
-      - prometheus
-  - id: redhat-support
-    name: Red Hat Support
-    description: Search Red Hat KB and manage support cases
-    examples:
-      - Search for OOMKilled errors
-      - Create a support case
-    tags:
-      - redhat
-      - kb
-      - support
+# A2A Skills - override in environment values
+a2aSkills: []
 
 # Labels
 labels:
