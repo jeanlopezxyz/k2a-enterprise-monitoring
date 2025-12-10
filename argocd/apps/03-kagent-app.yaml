@@ -3,7 +3,7 @@
 # =============================================================================
 #
 # Wave: 1 (se instala al final, despues de kmcp y kagent operators)
-# Namespaces: k2a-mcp-servers, kagent
+# Namespace: k2a (unificado para Agent + MCP Servers)
 # Values: argocd/values/03-kagent-app.yaml
 # Charts: charts/kmcp-servers, charts/kagent-app
 #
@@ -55,8 +55,8 @@ spec:
 
   destination:
     server: https://kubernetes.default.svc
-    # Namespace principal para ArgoCD (cada chart define su propio namespace en templates)
-    namespace: k2a-mcp-servers
+    # Namespace unificado para Agent + MCP Servers
+    namespace: k2a
 
   syncPolicy:
     automated:
