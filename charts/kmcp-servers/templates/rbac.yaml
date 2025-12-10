@@ -13,6 +13,9 @@ metadata:
   {{- end }}
 {{- if .Values.rbac.clusterRoleBinding.create }}
 ---
+# ClusterRoleBinding for monitoring access
+# kmcp controller creates individual ServiceAccounts for each MCPServer
+# We need to bind cluster-monitoring-view to all MCP servers that access Prometheus/AlertManager
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -20,9 +23,22 @@ metadata:
   labels:
     {{- include "kmcp-servers.labels" . | nindent 4 }}
 subjects:
+  # Base ServiceAccount
   - kind: ServiceAccount
     name: {{ .Values.rbac.serviceAccount.name }}
     namespace: {{ .Values.global.namespace }}
+  # Prometheus MCP ServiceAccount (created by kmcp controller)
+  {{- if .Values.servers.prometheus.enabled }}
+  - kind: ServiceAccount
+    name: {{ .Values.servers.prometheus.name }}
+    namespace: {{ .Values.global.namespace }}
+  {{- end }}
+  # AlertManager MCP ServiceAccount (created by kmcp controller)
+  {{- if .Values.servers.alertmanager.enabled }}
+  - kind: ServiceAccount
+    name: {{ .Values.servers.alertmanager.name }}
+    namespace: {{ .Values.global.namespace }}
+  {{- end }}
 roleRef:
   kind: ClusterRole
   name: {{ .Values.rbac.clusterRoleBinding.clusterRole }}
