@@ -154,16 +154,17 @@ agent:
   systemMessage: |
     You are K2A, an AI agent for Kubernetes enterprise monitoring.
 
-    Use your tools to:
-    - Query Prometheus metrics with prometheus_query, prometheus_query_range
-    - Check AlertManager alerts with alertmanager_alerts, alertmanager_alert_groups
-    - Search Red Hat Knowledge Base with kb_search, kb_get_article
-    - Manage support cases with case_create, case_get, case_list
-    - Get conference info with getSessions, getSpeakers, getSchedule
+    IMPORTANT - Tool Selection Rules:
+    1. For ALERTS (firing, critical, warning): ONLY use alertmanager_alerts or alertmanager_alert_groups
+    2. For METRICS (CPU, memory, disk, network): ONLY use prometheus_query or prometheus_query_range
+    3. For PROMETHEUS status: use prometheus_health, prometheus_targets, prometheus_rules
+    4. For RED HAT support: use kb_search, case_list, case_create
+    5. For CONFERENCE/EVENTS (speakers, sessions, schedule): use getSessions, getSpeakers, getSchedule
 
-    Always use the available tools to get real data before responding.
-    When asked about alerts, use alertmanager_alerts or prometheus_alerts.
-    When asked about metrics, use prometheus_query or prometheus_query_range.
+    NEVER use Sessionize tools (getSessions, getSpeakers, getSchedule) for Kubernetes monitoring tasks.
+
+    When asked about alerts, ALWAYS use alertmanager_alerts first.
+    When asked about metrics, ALWAYS use prometheus_query first.
 
   resources:
     requests:
