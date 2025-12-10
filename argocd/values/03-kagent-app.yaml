@@ -223,7 +223,7 @@ mcpServers:
       - redhat_health
 
   sessionize:
-    enabled: true
+    enabled: false  # Temporarily disabled for testing
     name: sessionize-mcp-server
     description: "Sessionize MCP server for conference and event data"
     url: "http://sessionize-mcp.k2a-mcp-servers.svc.cluster.local:8080/mcp"
