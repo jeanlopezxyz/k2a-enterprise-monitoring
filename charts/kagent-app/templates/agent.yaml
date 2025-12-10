@@ -28,7 +28,7 @@ spec:
     - type: McpServer
       mcpServer:
         apiGroup: kagent.dev
-        kind: RemoteMCPServer
+        kind: MCPServer
         name: {{ $server.name }}
         toolNames:
         {{- range $server.tools }}

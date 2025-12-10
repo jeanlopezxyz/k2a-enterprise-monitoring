@@ -6,11 +6,15 @@
 #   - MCP Servers (Quarkus Native: Prometheus, AlertManager, Red Hat Cases, Sessionize)
 #   - K2A Agent (Agente de IA)
 #
+# ARQUITECTURA:
+#   - Namespace 'k2a': Toda la aplicacion (Agent + MCP Servers)
+#   - Namespace 'kagent': Solo el operador kagent (controller, ui, tools)
+#
 # PREREQUISITO: Crear los secrets antes de desplegar
-#   kubectl create namespace kagent
-#   kubectl create secret generic kagent-openai-secret \
-#     --namespace kagent \
-#     --from-literal=api-key="sk-..."
+#   kubectl create namespace k2a
+#   kubectl create secret generic kagent-openai \
+#     --namespace k2a \
+#     --from-literal=OPENAI_API_KEY="sk-..."
 #
 # =============================================================================
 
@@ -18,9 +22,9 @@
 # SECCION 1: MCP SERVERS (chart: kmcp-servers) - Quarkus Native
 # =============================================================================
 
-# Namespace para MCP Servers
+# Namespace unificado para toda la aplicacion K2A
 global:
-  namespace: k2a-mcp-servers
+  namespace: k2a
 
 servers:
   # ------------------------------------------
@@ -154,7 +158,7 @@ modelConfig:
 # Agent configuration
 agent:
   name: k2a-enterprise-monitoring
-  namespace: kagent
+  namespace: k2a  # Mismo namespace que MCP servers para usar MCPServer (kmcp)
   modelConfig: k2a-model-config
   # Use ConfigMap for systemMessage (scalable option)
   systemMessageConfigMap:
@@ -205,16 +209,13 @@ agent:
       cpu: 1000m
       memory: 1Gi
 
-# RemoteMCPServer definitions (HTTP connections to kmcp MCP servers)
-# terminateOnClose: false to keep sessions alive for multiple tool calls
+# MCPServer references (kmcp) - Agent y MCP servers en mismo namespace
+# El Agent referencia directamente los MCPServer CRDs de kmcp (sin URLs)
+# Esto es posible porque todo esta en namespace 'k2a'
 mcpServers:
   prometheus:
     enabled: true
-    name: prometheus-mcp-server
-    description: "Prometheus MCP server for querying metrics"
-    url: "http://prometheus-mcp.k2a-mcp-servers.svc.cluster.local:9081/mcp"
-    timeout: "60s"
-    sseReadTimeout: "5m"
+    name: prometheus-mcp  # Debe coincidir con servers.prometheus.name
     tools:
       - query
       - queryRange
@@ -224,11 +225,7 @@ mcpServers:
 
   alertmanager:
     enabled: true
-    name: alertmanager-mcp-server
-    description: "AlertManager MCP server for managing alerts"
-    url: "http://alertmanager-mcp.k2a-mcp-servers.svc.cluster.local:9082/mcp"
-    timeout: "60s"
-    sseReadTimeout: "5m"
+    name: alertmanager-mcp  # Debe coincidir con servers.alertmanager.name
     tools:
       - getAlerts
       - getAlertGroups
@@ -240,11 +237,7 @@ mcpServers:
 
   redhatCases:
     enabled: true
-    name: redhat-cases-mcp-server
-    description: "Red Hat Cases MCP server for KB and support"
-    url: "http://redhat-cases-mcp.k2a-mcp-servers.svc.cluster.local:9080/mcp"
-    timeout: "60s"
-    sseReadTimeout: "5m"
+    name: redhat-cases-mcp  # Debe coincidir con servers.redhatCases.name
     tools:
       - searchKnowledgeBase
       - getSolution
@@ -261,9 +254,7 @@ mcpServers:
 
   sessionize:
     enabled: false  # Temporarily disabled
-    name: sessionize-mcp-server
-    description: "Sessionize MCP server for conference data"
-    url: "http://sessionize-mcp.k2a-mcp-servers.svc.cluster.local:8080/mcp"
+    name: sessionize-mcp  # Debe coincidir con servers.sessionize.name
     tools:
       - getSpeakers
       - findSpeaker
