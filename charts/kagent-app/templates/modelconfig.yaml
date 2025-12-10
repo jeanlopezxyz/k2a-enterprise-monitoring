@@ -3,7 +3,7 @@ apiVersion: kagent.dev/v1alpha2
 kind: ModelConfig
 metadata:
   name: {{ .Values.modelConfig.name }}
-  namespace: {{ .Values.global.namespace }}
+  namespace: {{ .Values.agent.namespace | default .Values.global.namespace }}
   labels:
     {{- include "k2a-agent.labels" . | nindent 4 }}
 spec:
