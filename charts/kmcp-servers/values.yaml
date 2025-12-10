@@ -8,13 +8,18 @@
 #   - Service (ClusterIP)
 #   - ServiceAccount (con annotations para IRSA, Workload Identity, etc.)
 #
+# ARQUITECTURA:
+#   - Namespace 'k2a': MCP Servers + Agent (unificado)
+#   - Namespace 'kagent': Solo operador kagent (controller, ui, tools)
+#   - Namespace 'kmcp-system': Solo operador kmcp (controller)
+#
 # NOTA: Las imagenes son Quarkus Native desde GitHub Container Registry.
 #       Los Secrets y ConfigMaps se crean por separado.
 #
 # Prerequisitos:
 #   - kmcp operator instalado (namespace: kmcp-system)
 #   - CRD kagent.dev/MCPServer disponible
-#   - Secrets creados en el namespace k2a-mcp-servers
+#   - Secrets creados en el namespace k2a
 #
 # Referencia: docs/KMCP-GUIA-CONFIGURACION.md
 #
@@ -24,8 +29,8 @@
 # GLOBAL CONFIGURATION
 # ============================================
 global:
-  # Namespace donde se despliegan los MCPServers
-  namespace: k2a-mcp-servers
+  # Namespace unificado para MCP Servers y Agent
+  namespace: k2a
 
 # ============================================
 # COMMON LABELS
@@ -255,19 +260,24 @@ secrets:
 # INTEGRACION CON KAGENT
 # ============================================
 #
-# Despues de desplegar un MCPServer, conectarlo desde kagent
-# usando RemoteMCPServer en charts/kagent-app:
+# El Agent referencia los MCPServer CRDs directamente (mismo namespace k2a).
+# En el chart kagent-app, configurar mcpServers:
 #
-# Prometheus:
-#   url: http://prometheus-mcp.k2a-mcp-servers.svc.cluster.local:9081/mcp
+#   mcpServers:
+#     prometheus:
+#       enabled: true
+#       name: prometheus-mcp      # Debe coincidir con servers.prometheus.name
+#       tools:
+#         - query
+#         - queryRange
 #
-# AlertManager:
-#   url: http://alertmanager-mcp.k2a-mcp-servers.svc.cluster.local:9082/mcp
+#     alertmanager:
+#       enabled: true
+#       name: alertmanager-mcp    # Debe coincidir con servers.alertmanager.name
+#       tools:
+#         - getAlerts
+#         - getAlertGroups
 #
-# Red Hat Cases:
-#   url: http://redhat-cases-mcp.k2a-mcp-servers.svc.cluster.local:9080/mcp
-#
-# Sessionize:
-#   url: http://sessionize-mcp.k2a-mcp-servers.svc.cluster.local:8080/mcp
+# El Agent usa kind: MCPServer (no RemoteMCPServer) porque estan en el mismo namespace.
 #
 # ============================================
