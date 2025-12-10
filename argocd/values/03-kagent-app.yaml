@@ -33,7 +33,7 @@ servers:
     transportType: http
     image:
       repository: ghcr.io/jeanlopezxyz/mcp-prometheus
-      tag: "1.0.6"
+      tag: "1.0.7"
     port: 9081
     env:
       PROMETHEUS_URL: "https://thanos-querier.openshift-monitoring.svc.cluster.local:9091"
@@ -60,7 +60,7 @@ servers:
     transportType: http
     image:
       repository: ghcr.io/jeanlopezxyz/mcp-alertmanager
-      tag: "1.0.11"
+      tag: "1.0.12"
     port: 9082
     env:
       ALERTMANAGER_URL: "https://alertmanager-main.openshift-monitoring.svc.cluster.local:9094"
@@ -87,7 +87,7 @@ servers:
     transportType: http
     image:
       repository: ghcr.io/jeanlopezxyz/mcp-redhat-cases
-      tag: "1.0.3"
+      tag: "1.0.4"
     port: 9080
     env:
       QUARKUS_HTTP_HOST: "0.0.0.0"
@@ -140,13 +140,11 @@ servers:
 modelConfig:
   create: true
   name: k2a-model-config
-  provider: openai
+  provider: OpenAI
   model: gpt-4o
   secretRef:
     name: kagent-openai-secret
     key: api-key
-  temperature: 0.7
-  maxTokens: 4096
 
 # Agent configuration
 agent:
