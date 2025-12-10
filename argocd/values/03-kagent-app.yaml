@@ -205,15 +205,16 @@ agent:
       cpu: 1000m
       memory: 1Gi
 
-# RemoteMCPServer definitions (conexiones del agente a los MCP servers)
+# MCPServer references (conexiones del agente a los MCP servers de kmcp)
+# useKmcp: true -> usa MCPServer de kmcp (cross-namespace)
+# useKmcp: false -> usa RemoteMCPServer (HTTP directo)
 mcpServers:
   prometheus:
     enabled: true
-    name: prometheus-mcp-server
-    description: "Prometheus MCP server for querying metrics and alerts"
-    url: "http://prometheus-mcp.k2a-mcp-servers.svc.cluster.local:9081/mcp"
+    useKmcp: true  # Use kmcp MCPServer
+    kmcpName: prometheus-mcp
+    kmcpNamespace: k2a-mcp-servers
     tools:
-      # Actual tool names from Quarkus MCP server
       - query
       - queryRange
       - getRules
@@ -222,11 +223,10 @@ mcpServers:
 
   alertmanager:
     enabled: true
-    name: alertmanager-mcp-server
-    description: "AlertManager MCP server for managing alerts and silences"
-    url: "http://alertmanager-mcp.k2a-mcp-servers.svc.cluster.local:9082/mcp"
+    useKmcp: true  # Use kmcp MCPServer
+    kmcpName: alertmanager-mcp
+    kmcpNamespace: k2a-mcp-servers
     tools:
-      # Actual tool names from Quarkus MCP server
       - getAlerts
       - getAlertGroups
       - getSilences
@@ -237,11 +237,10 @@ mcpServers:
 
   redhatCases:
     enabled: true
-    name: redhat-cases-mcp-server
-    description: "Red Hat Cases MCP server for KB search and case management"
-    url: "http://redhat-cases-mcp.k2a-mcp-servers.svc.cluster.local:9080/mcp"
+    useKmcp: true  # Use kmcp MCPServer
+    kmcpName: redhat-cases-mcp
+    kmcpNamespace: k2a-mcp-servers
     tools:
-      # Actual tool names from Quarkus MCP server
       - searchKnowledgeBase
       - getSolution
       - createCase
@@ -256,10 +255,10 @@ mcpServers:
       - listVersions
 
   sessionize:
-    enabled: false  # Temporarily disabled for testing
-    name: sessionize-mcp-server
-    description: "Sessionize MCP server for conference and event data"
-    url: "http://sessionize-mcp.k2a-mcp-servers.svc.cluster.local:8080/mcp"
+    enabled: false  # Temporarily disabled
+    useKmcp: true
+    kmcpName: sessionize-mcp
+    kmcpNamespace: k2a-mcp-servers
     tools:
       - getSpeakers
       - findSpeaker

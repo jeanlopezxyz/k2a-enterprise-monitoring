@@ -28,8 +28,16 @@ spec:
     - type: McpServer
       mcpServer:
         apiGroup: kagent.dev
+        {{- if $server.useKmcp }}
+        # Use MCPServer from kmcp (cross-namespace reference)
+        kind: MCPServer
+        name: {{ $server.kmcpName | default $server.name }}
+        namespace: {{ $server.kmcpNamespace | default $.Values.global.namespace }}
+        {{- else }}
+        # Use RemoteMCPServer (HTTP)
         kind: RemoteMCPServer
         name: {{ $server.name }}
+        {{- end }}
         toolNames:
         {{- range $server.tools }}
         - {{ . }}
