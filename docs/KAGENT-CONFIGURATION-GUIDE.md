@@ -15,9 +15,13 @@ Esta guia documenta todos los recursos de Kubernetes que se crean al instalar ka
 6. [Configuracion de ModelConfig](#configuracion-de-modelconfig)
 7. [Configuracion de RemoteMCPServer](#configuracion-de-remotemcpserver)
 8. [Configuracion de Memory](#configuracion-de-memory)
-9. [Usando Kubernetes Service como MCP Server](#usando-kubernetes-service-como-mcp-server)
-10. [Configuracion de ToolServer (DEPRECADO)](#configuracion-de-toolserver-deprecado)
-11. [Ejemplos Practicos](#ejemplos-practicos)
+9. [Interaccion entre Agentes y MCP Servers](#interaccion-entre-agentes-y-mcp-servers)
+10. [Usando Kubernetes Service como MCP Server](#usando-kubernetes-service-como-mcp-server)
+11. [Configuracion de ToolServer (DEPRECADO)](#configuracion-de-toolserver-deprecado)
+12. [Ejemplos Practicos](#ejemplos-practicos)
+13. [Configuracion de Skills (Container Images)](#configuracion-de-skills-container-images)
+14. [Configuracion de Seguridad](#configuracion-de-seguridad)
+15. [Referencia Rapida](#referencia-rapida)
 
 ---
 
@@ -105,20 +109,15 @@ kagent help
 
 Para entornos de produccion o cuando necesitas mayor control sobre la configuracion.
 
-#### 1. Agregar el Repositorio
+> **Nota:** kagent usa un registro OCI (ghcr.io) en lugar de un repositorio Helm tradicional.
 
-```bash
-helm repo add kagent https://kagent-dev.github.io/kagent
-helm repo update
-```
-
-#### 2. Crear el Namespace
+#### 1. Crear el Namespace
 
 ```bash
 kubectl create namespace kagent-system
 ```
 
-#### 3. Crear el Secret con API Key
+#### 2. Crear el Secret con API Key
 
 ```bash
 kubectl create secret generic kagent-openai \
@@ -126,17 +125,28 @@ kubectl create secret generic kagent-openai \
   --from-literal=api-key="${OPENAI_API_KEY}"
 ```
 
-#### 4. Instalar con Helm
+#### 3. Instalar CRDs
+
+```bash
+# Primero instalar los CRDs
+helm install kagent-crds oci://ghcr.io/kagent-dev/kagent/helm/kagent-crds \
+  --namespace kagent-system \
+  --version 0.7.6
+```
+
+#### 4. Instalar kagent
 
 ```bash
 # Instalacion basica
-helm install kagent kagent/kagent \
+helm install kagent oci://ghcr.io/kagent-dev/kagent/helm/kagent \
   --namespace kagent-system \
+  --version 0.7.6 \
   --set modelConfig.apiKeySecret=kagent-openai
 
 # Instalacion con valores personalizados
-helm install kagent kagent/kagent \
+helm install kagent oci://ghcr.io/kagent-dev/kagent/helm/kagent \
   --namespace kagent-system \
+  --version 0.7.6 \
   -f values.yaml
 ```
 
@@ -194,6 +204,37 @@ tools:
 
 Para entornos GitOps y produccion enterprise, kagent se puede desplegar usando ArgoCD.
 
+> **Nota:** kagent usa un registro OCI (ghcr.io) en lugar de un repositorio Helm tradicional.
+> Se requiere instalar primero los CRDs y luego el chart principal.
+
+#### Prerequisitos: Instalar CRDs
+
+Antes de instalar kagent, debes instalar los CRDs. Crea esta Application primero:
+
+```yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kagent-crds
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: ghcr.io/kagent-dev/kagent/helm
+    chart: kagent-crds
+    targetRevision: 0.7.6
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kagent-system
+  syncPolicy:
+    automated:
+      prune: false  # No eliminar CRDs automaticamente
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+```
+
 #### Opcion 1: Application Simple
 
 ```yaml
@@ -205,9 +246,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://kagent-dev.github.io/kagent
+    repoURL: ghcr.io/kagent-dev/kagent/helm
     chart: kagent
-    targetRevision: 0.1.0  # Especificar version
+    targetRevision: 0.7.6
     helm:
       values: |
         namespace: kagent-system
@@ -264,9 +305,9 @@ spec:
     spec:
       project: default
       source:
-        repoURL: https://kagent-dev.github.io/kagent
+        repoURL: ghcr.io/kagent-dev/kagent/helm
         chart: kagent
-        targetRevision: 0.1.0
+        targetRevision: 0.7.6
         helm:
           valueFiles:
             - values-{{name}}.yaml
@@ -381,7 +422,7 @@ metadata:
 spec:
   description: kagent AI Agent Framework
   sourceRepos:
-    - https://kagent-dev.github.io/kagent
+    - ghcr.io/kagent-dev/kagent/helm/*
     - https://github.com/tu-org/tu-repo.git
   destinations:
     - namespace: kagent-system
@@ -615,10 +656,44 @@ Cuando creas un recurso Agent:
 
 ### Tipos de Agent
 
-| Tipo | Descripcion |
-|------|-------------|
-| `Declarative` | Gestionado por kagent, deployment automatico |
-| `BYO` (Bring Your Own) | El usuario proporciona su propio deployment |
+kagent soporta dos tipos de agentes que se adaptan a diferentes casos de uso:
+
+| Tipo | Descripcion | Caso de Uso |
+|------|-------------|-------------|
+| `Declarative` | Gestionado completamente por kagent | Agentes estandar donde kagent maneja el deployment, ConfigMaps y Services automaticamente |
+| `BYO` (Bring Your Own) | El usuario proporciona su propia imagen de agente | Agentes personalizados con logica custom o integracion con frameworks existentes |
+
+#### Agente Declarative
+El controlador de kagent crea automaticamente:
+- **Deployment** para ejecutar el agente
+- **ConfigMap** con la configuracion del agente
+- **Service** para exponer el agente (si es necesario)
+
+```yaml
+spec:
+  type: Declarative
+  description: "Mi agente gestionado"
+  declarative:
+    modelConfig: mi-modelo
+    systemMessage: "Eres un asistente experto"
+    tools: [...]
+```
+
+#### Agente BYO (Bring Your Own)
+Util cuando tienes una imagen de agente personalizada o logica de negocio especifica:
+
+```yaml
+spec:
+  type: BYO
+  description: "Agente con imagen custom"
+  byo:
+    deployment:
+      image: mi-registry.com/mi-agente:v1.0.0
+      resources:
+        requests:
+          cpu: 500m
+          memory: 1Gi
+```
 
 ### Especificacion Completa del Agent (v1alpha2)
 
@@ -670,11 +745,12 @@ spec:
     # HERRAMIENTAS (TOOLS)
     # ----------------------------------------
     tools:
-      # Tipo 1: MCP Server
-      - type: MCPServer
+      # Tipo 1: MCP Server (RemoteMCPServer)
+      - type: McpServer
         mcpServer:
           name: mi-mcp-server
-          kind: RemoteMCPServer  # RemoteMCPServer, Service, o MCPServer (kmcp)
+          kind: RemoteMCPServer
+          apiGroup: kagent.dev  # Requerido para RemoteMCPServer
           # Lista opcional de tools especificas
           toolNames:
             - tool_1
@@ -687,7 +763,15 @@ spec:
               name: mi-secret
               key: token
 
-      # Tipo 2: Otro Agent como herramienta (agentes anidados)
+      # Tipo 2: MCP Server (Service de Kubernetes)
+      - type: McpServer
+        mcpServer:
+          name: mi-mcp-service
+          kind: Service  # Usa Service de K8s directamente
+          toolNames:
+            - tool_1
+
+      # Tipo 3: Otro Agent como herramienta (agentes anidados)
       - type: Agent
         agent:
           name: agente-especialista  # o namespace/nombre
@@ -812,12 +896,15 @@ spec:
 
 | Campo | Tipo | Descripcion |
 |-------|------|-------------|
-| `type` | string | `MCPServer` o `Agent` |
+| `type` | string | `McpServer` o `Agent` |
 | `mcpServer.name` | string | Nombre del recurso MCP |
-| `mcpServer.kind` | string | `RemoteMCPServer`, `Service`, `MCPServer` |
+| `mcpServer.kind` | string | `RemoteMCPServer`, `Service`, `MCPServer` (kmcp) |
+| `mcpServer.apiGroup` | string | API group (requerido para `RemoteMCPServer`: `kagent.dev`) |
 | `mcpServer.toolNames` | []string | Tools especificos a exponer (opcional) |
 | `agent.name` | string | Nombre del Agent a usar como tool |
 | `headersFrom` | []ValueRef | Headers de autenticacion |
+
+> **Nota importante sobre `type`:** En la API v1alpha2 de kagent, el valor correcto es `McpServer` (con 'M' mayuscula y 'c' minuscula), no `MCPServer`.
 
 ### Opciones de Deployment
 
@@ -1218,6 +1305,84 @@ spec:
 
 ---
 
+## Interaccion entre Agentes y MCP Servers
+
+### Flujo de Comunicacion
+
+Los agentes de kagent interactuan con herramientas (tools) a traves del protocolo MCP (Model Context Protocol). El flujo es el siguiente:
+
+```
+┌─────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│   Usuario   │────▶│     Agent       │────▶│   MCP Server    │
+│   (Chat)    │     │  (LLM Worker)   │     │  (Tools/APIs)   │
+└─────────────┘     └─────────────────┘     └─────────────────┘
+                           │                        │
+                           │  1. User query         │
+                           │  2. LLM decide tool    │
+                           │  3. Call MCP tool ────▶│
+                           │  4. Tool result ◀──────│
+                           │  5. LLM format response│
+                           ▼
+                    ┌─────────────────┐
+                    │   Response to   │
+                    │     User        │
+                    └─────────────────┘
+```
+
+### Tipos de MCP Server soportados
+
+kagent soporta **3 formas** de conectar agentes a MCP servers:
+
+| Kind | API Group | Descripcion | Uso Principal |
+|------|-----------|-------------|---------------|
+| `RemoteMCPServer` | `kagent.dev` | CRD de kagent para MCP HTTP/SSE | Servidores MCP externos o remotos |
+| `Service` | - | K8s Service con anotaciones | Servicios MCP ya desplegados en el cluster |
+| `MCPServer` | `kmcp.dev` | Recurso de kmcp | Servidores MCP stdio ejecutados via kmcp |
+
+### Ejemplo Completo de Integracion
+
+```yaml
+# 1. RemoteMCPServer - Define el servidor MCP
+apiVersion: kagent.dev/v1alpha2
+kind: RemoteMCPServer
+metadata:
+  name: prometheus-mcp
+  namespace: kagent
+spec:
+  url: "http://mcp-prometheus.mcp-servers:9081/mcp/sse"
+  description: "MCP Server para Prometheus - Consultas PromQL"
+  timeout: 30s
+  sseReadTimeout: 5m0s
+---
+# 2. Agent - Usa el MCP Server
+apiVersion: kagent.dev/v1alpha2
+kind: Agent
+metadata:
+  name: monitoring-agent
+  namespace: kagent
+spec:
+  type: Declarative
+  description: "Agente de monitoreo con Prometheus"
+  declarative:
+    modelConfig: default-model-config
+    stream: true
+    systemMessage: |
+      Eres un experto en monitoreo de Kubernetes.
+      Usa las herramientas de Prometheus para responder consultas.
+    tools:
+      - type: McpServer
+        mcpServer:
+          name: prometheus-mcp
+          kind: RemoteMCPServer
+          apiGroup: kagent.dev
+          toolNames:
+            - query
+            - queryRange
+            - getTargets
+```
+
+---
+
 ## Usando Kubernetes Service como MCP Server
 
 Puedes usar un Service de Kubernetes directamente como MCP server sin crear un RemoteMCPServer:
@@ -1328,7 +1493,8 @@ metadata:
 spec:
   url: "http://kubernetes-mcp.mcp-servers:8080/mcp"
   description: "Servidor MCP para Kubernetes"
-  protocol: STREAMABLE_HTTP
+  timeout: 30s
+  sseReadTimeout: 5m0s
 ---
 # Agente con tools
 apiVersion: kagent.dev/v1alpha2
@@ -1338,17 +1504,19 @@ metadata:
   namespace: kagent
 spec:
   type: Declarative
+  description: "Asistente para gestion de Kubernetes"
   declarative:
-    description: "Asistente para gestion de Kubernetes"
     systemMessage: |
       Eres un experto en Kubernetes.
       Usa las herramientas disponibles para ayudar al usuario.
     modelConfig: gpt4-config
+    stream: true
     tools:
-      - type: MCPServer
+      - type: McpServer
         mcpServer:
           name: kubernetes-mcp
           kind: RemoteMCPServer
+          apiGroup: kagent.dev
           toolNames:
             - k8s_get_resources
             - k8s_describe_resource
@@ -1633,15 +1801,689 @@ spec:
 
 ---
 
+## Configuracion de Skills (Container Images)
+
+### Que son los Skills?
+
+Los **Skills** son paquetes de codigo y configuracion empaquetados como **imagenes de contenedor OCI** que se montan en el agente y le proporcionan capacidades especializadas. A diferencia de las herramientas MCP que exponen APIs, los Skills son **archivos ejecutables locales** que el agente puede usar directamente.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         AGENT POD                               │
+├─────────────────────────────────────────────────────────────────┤
+│  ┌──────────────┐    ┌──────────────────────────────────────┐  │
+│  │  Init        │    │           Main Container             │  │
+│  │  Container   │    │                                      │  │
+│  │              │    │  ┌────────────────────────────────┐  │  │
+│  │  kagent-adk  │───▶│  │  /skills/                      │  │  │
+│  │  pull-skills │    │  │  ├── data-analysis/            │  │  │
+│  │              │    │  │  │   ├── SKILL.md              │  │  │
+│  │  Descarga:   │    │  │  │   └── scripts/analyze.py    │  │  │
+│  │  - skill1    │    │  │  └── pdf-processing/           │  │  │
+│  │  - skill2    │    │  │      ├── SKILL.md              │  │  │
+│  │              │    │  │      └── scripts/extract.py    │  │  │
+│  └──────────────┘    │  └────────────────────────────────┘  │  │
+│         │            │                  ▲                    │  │
+│         │            │                  │                    │  │
+│         ▼            │        Agent usa BashTool para       │  │
+│  ┌──────────────┐    │        ejecutar scripts              │  │
+│  │ emptyDir     │────┼──────────────────┘                   │  │
+│  │ volume       │    │                                      │  │
+│  │ /skills      │    └──────────────────────────────────────┘  │
+│  └──────────────┘                                               │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Como Funcionan los Skills
+
+1. **Init Container**: Antes de que el agente inicie, un init container ejecuta `kagent-adk pull-skills` que descarga las imagenes de skills especificadas
+2. **Montaje**: Los skills se extraen y montan en `/skills` (volumen compartido read-only)
+3. **Descubrimiento**: El agente usa `SkillsTool` para listar skills disponibles
+4. **Carga**: El agente lee `SKILL.md` para obtener instrucciones
+5. **Ejecucion**: El agente usa `BashTool` para ejecutar los scripts del skill
+
+### Estructura de un Skill
+
+Cada skill es una imagen OCI con la siguiente estructura:
+
+```
+skill-image/
+├── SKILL.md           # Metadatos YAML + instrucciones (requerido)
+├── LICENSE.txt        # Licencia del skill (opcional)
+└── scripts/           # Scripts ejecutables
+    ├── main.py
+    ├── utils.py
+    └── config.json
+```
+
+**Ejemplo de SKILL.md:**
+
+```markdown
+---
+name: data-analysis
+description: Analiza archivos CSV y Excel con pandas
+license: Complete terms in LICENSE.txt
+---
+
+# Data Analysis Skill
+
+Este skill te permite analizar datos de archivos CSV y Excel.
+
+## Uso
+
+1. Primero, stage el archivo del usuario:
+   \`stage_artifacts(artifact_names=["archivo.csv"])\`
+
+2. Ejecuta el analisis:
+   \`bash("python /skills/data-analysis/scripts/analyze.py uploads/archivo.csv")\`
+
+3. Retorna el resultado:
+   \`return_artifacts(file_paths=["outputs/report.pdf"])\`
+```
+
+### Especificacion de Skills en Agent
+
+```yaml
+apiVersion: kagent.dev/v1alpha2
+kind: Agent
+metadata:
+  name: mi-agente-con-skills
+  namespace: kagent
+spec:
+  type: Declarative
+
+  # Configuracion de Skills
+  skills:
+    # Lista de imagenes de skills a descargar (maximo 20)
+    refs:
+      - ghcr.io/mi-org/data-analysis-skill:v1.0.0
+      - ghcr.io/mi-org/pdf-processing-skill:latest
+      - mi-registry.com/custom-skill:v2.1.0
+
+    # Solo para desarrollo/testing - NO usar en produccion
+    insecureSkipVerify: false
+
+  declarative:
+    modelConfig: default-model-config
+    systemMessage: |
+      Tienes acceso a skills especializados.
+      Usa el tool 'skills' para descubrir y cargar skills disponibles.
+      Usa 'bash' para ejecutar los scripts de los skills.
+    tools:
+      # Los skills NO requieren tools MCP adicionales
+      # El agente ya tiene acceso a SkillsTool y BashTool integrados
+      []
+```
+
+### Opciones de Skills
+
+| Campo | Tipo | Descripcion | Default |
+|-------|------|-------------|---------|
+| `refs` | []string | Lista de imagenes OCI de skills (max 20) | Requerido |
+| `insecureSkipVerify` | bool | Permitir HTTP y skip TLS (solo dev) | `false` |
+
+### Flujo de Ejecucion del Agente con Skills
+
+```python
+# Usuario: "Analiza mi archivo de ventas"
+
+# 1. Agente descubre skills disponibles
+agent: skills()
+# → Lista: data-analysis, pdf-processing, etc.
+
+# 2. Agente carga instrucciones del skill
+agent: skills(command='data-analysis')
+# → Retorna contenido de SKILL.md
+
+# 3. Agente prepara archivo del usuario
+agent: stage_artifacts(artifact_names=["ventas.csv"])
+# → Archivo disponible en: uploads/ventas.csv
+
+# 4. Agente ejecuta script del skill
+agent: bash("cd /skills/data-analysis && python scripts/analyze.py ../../uploads/ventas.csv")
+# → Script genera: outputs/analysis_report.pdf
+
+# 5. Agente retorna resultado
+agent: return_artifacts(file_paths=["outputs/analysis_report.pdf"])
+# → Usuario puede descargar el reporte
+```
+
+### Directorio de Trabajo por Sesion
+
+Cada sesion de agente tiene un directorio aislado:
+
+```
+/tmp/kagent/{session_id}/
+├── skills/      → symlink a /skills (read-only, compartido)
+├── uploads/     → archivos del usuario (writable)
+├── outputs/     → archivos generados (writable)
+└── *.py         → scripts temporales (writable)
+```
+
+### Ejemplo: Skill de Analisis de Datos
+
+**1. Crear la imagen del skill:**
+
+```dockerfile
+FROM python:3.11-slim
+
+# Instalar dependencias
+RUN pip install pandas matplotlib seaborn
+
+# Copiar skill
+COPY SKILL.md /SKILL.md
+COPY scripts/ /scripts/
+
+# Label para identificar como skill
+LABEL org.kagent.skill=true
+```
+
+**2. SKILL.md:**
+
+```markdown
+---
+name: pandas-analysis
+description: Analiza datos con pandas y genera visualizaciones
+license: MIT
+---
+
+# Pandas Data Analysis
+
+## Instrucciones
+
+Para analizar un archivo CSV:
+
+1. Stage el archivo: \`stage_artifacts(artifact_names=["data.csv"])\`
+2. Ejecuta: \`bash("python /skills/pandas-analysis/scripts/analyze.py uploads/data.csv")\`
+3. Retorna: \`return_artifacts(file_paths=["outputs/report.html"])\`
+```
+
+**3. Usar en Agent:**
+
+```yaml
+apiVersion: kagent.dev/v1alpha2
+kind: Agent
+metadata:
+  name: data-analyst
+spec:
+  type: Declarative
+  skills:
+    refs:
+      - ghcr.io/mi-org/pandas-analysis:v1.0.0
+  declarative:
+    modelConfig: default-model-config
+    systemMessage: |
+      Eres un analista de datos experto.
+      Usa tus skills para analizar archivos del usuario.
+```
+
+### Skills vs Tools MCP
+
+| Caracteristica | Skills | Tools MCP |
+|----------------|--------|-----------|
+| **Ubicacion** | Local en el pod del agente | Remoto via HTTP/SSE |
+| **Empaquetado** | Imagen OCI | Servidor MCP |
+| **Ejecucion** | `bash` + scripts locales | Llamadas HTTP |
+| **Estado** | Stateless por sesion | Depende del servidor |
+| **Uso de recursos** | Usa CPU/memoria del agente | Servidor independiente |
+| **Casos de uso** | Procesamiento de archivos, scripts Python, analisis de datos | APIs externas, bases de datos, servicios cloud |
+
+### Seguridad de Skills
+
+- **Read-only**: El directorio `/skills` es de solo lectura
+- **Aislamiento**: Cada sesion tiene su propio directorio de trabajo
+- **Sandbox**: BashTool ejecuta en sandbox con timeouts
+- **Limites**: Maximo 100MB por archivo, timeout 30s (120s para pip)
+
+---
+
+## Configuracion de Seguridad
+
+kagent proporciona multiples capas de seguridad para proteger tu infraestructura y datos sensibles.
+
+### 1. Security Context para Pods
+
+Configura el contexto de seguridad en el Helm values:
+
+```yaml
+# values.yaml
+podSecurityContext:
+  fsGroup: 2000
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 1000
+  allowPrivilegeEscalation: false
+```
+
+### 2. Configuracion TLS para Proveedores LLM
+
+ModelConfig soporta TLS personalizado para conectarse a proveedores LLM internos o con certificados personalizados:
+
+```yaml
+apiVersion: kagent.dev/v1alpha2
+kind: ModelConfig
+metadata:
+  name: internal-llm-config
+  namespace: kagent
+spec:
+  provider: OpenAI
+  model: gpt-4o
+  apiKeySecret: llm-api-key
+  apiKeySecretKey: api-key
+
+  # Configuracion TLS
+  tls:
+    # Referencia a Secret con certificado CA personalizado
+    caCertSecretRef: internal-ca-cert
+    caCertSecretKey: ca.crt
+
+    # SOLO para desarrollo - NO usar en produccion
+    # disableVerify: false
+
+    # Deshabilitar CAs del sistema (usar solo CA personalizado)
+    # disableSystemCAs: false
+```
+
+**Crear el Secret con el certificado CA:**
+
+```bash
+kubectl create secret generic internal-ca-cert \
+  --namespace kagent \
+  --from-file=ca.crt=/path/to/ca-certificate.pem
+```
+
+### 3. RBAC - Control de Acceso Basado en Roles
+
+kagent crea ClusterRoles para controlar el acceso a recursos:
+
+#### ClusterRole: Getter (Solo lectura)
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kagent-getter-role
+rules:
+- apiGroups: ["kagent.dev"]
+  resources:
+  - agents
+  - modelconfigs
+  - remotemcpservers
+  - memories
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["*"]
+  verbs: ["get", "list", "watch"]
+```
+
+#### ClusterRole: Writer (Lectura/Escritura)
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kagent-writer-role
+rules:
+- apiGroups: ["kagent.dev"]
+  resources:
+  - agents
+  - modelconfigs
+  - remotemcpservers
+  - memories
+  verbs: ["create", "update", "patch", "delete"]
+```
+
+#### Crear RoleBinding para Usuarios
+
+```yaml
+# Solo lectura para equipo de observabilidad
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: kagent-observability-team
+  namespace: kagent
+subjects:
+- kind: Group
+  name: observability-team
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: kagent-getter-role
+  apiGroup: rbac.authorization.k8s.io
+---
+# Lectura/escritura para equipo de plataforma
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: kagent-platform-team
+  namespace: kagent
+subjects:
+- kind: Group
+  name: platform-team
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: kagent-writer-role
+  apiGroup: rbac.authorization.k8s.io
+```
+
+### 4. Gestion Segura de Secrets
+
+#### Uso con External Secrets Operator
+
+```yaml
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: kagent-openai
+  namespace: kagent
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: vault-backend
+    kind: ClusterSecretStore
+  target:
+    name: kagent-openai
+    creationPolicy: Owner
+  data:
+  - secretKey: OPENAI_API_KEY
+    remoteRef:
+      key: secret/data/kagent/openai
+      property: api_key
+```
+
+#### Uso con Sealed Secrets
+
+```yaml
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  name: kagent-openai
+  namespace: kagent
+spec:
+  encryptedData:
+    OPENAI_API_KEY: AgBy8hT...encrypted...
+  template:
+    metadata:
+      name: kagent-openai
+      namespace: kagent
+```
+
+### 5. Network Policies
+
+Restringe el trafico de red entre componentes:
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kagent-controller-policy
+  namespace: kagent
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: controller
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Permitir trafico desde UI
+  - from:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/component: ui
+    ports:
+    - protocol: TCP
+      port: 8083
+  egress:
+  # Permitir trafico a API de Kubernetes
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443
+  # Permitir trafico a agentes
+  - to:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/part-of: kagent
+    ports:
+    - protocol: TCP
+      port: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kagent-agent-policy
+  namespace: kagent
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/part-of: kagent
+  policyTypes:
+  - Egress
+  egress:
+  # Permitir trafico a proveedores LLM externos
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443
+  # Permitir trafico a MCP servers
+  - to:
+    - namespaceSelector: {}
+      podSelector:
+        matchLabels:
+          kagent.dev/mcp-server: "true"
+    ports:
+    - protocol: TCP
+      port: 3000
+```
+
+### 6. ServiceAccount por Agente
+
+Cada agente puede tener su propio ServiceAccount con permisos limitados:
+
+```yaml
+apiVersion: kagent.dev/v1alpha2
+kind: Agent
+metadata:
+  name: k8s-reader-agent
+  namespace: kagent
+spec:
+  type: Declarative
+  # ServiceAccount personalizado para el agente
+  serviceAccountName: k8s-reader-sa
+  declarative:
+    modelConfig: default-model-config
+    systemMessage: "Solo puedes leer recursos de Kubernetes"
+    tools:
+      - type: McpServer
+        mcpServer:
+          name: k8s-tools
+          kind: RemoteMCPServer
+          apiGroup: kagent.dev
+          toolNames:
+            - get_pod
+            - list_pods
+            - get_deployment
+            # NO incluir: create, delete, patch
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: k8s-reader-sa
+  namespace: kagent
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: k8s-reader-binding
+  namespace: default
+subjects:
+- kind: ServiceAccount
+  name: k8s-reader-sa
+  namespace: kagent
+roleRef:
+  kind: ClusterRole
+  name: view  # Solo permisos de lectura
+  apiGroup: rbac.authorization.k8s.io
+```
+
+### 7. Integracion con Cloud IAM
+
+#### AWS IRSA (IAM Roles for Service Accounts)
+
+```yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: aws-agent-sa
+  namespace: kagent
+  annotations:
+    eks.amazonaws.com/role-arn: "arn:aws:iam::123456789012:role/kagent-s3-role"
+    eks.amazonaws.com/sts-regional-endpoints: "true"
+```
+
+#### GCP Workload Identity
+
+```yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: gcp-agent-sa
+  namespace: kagent
+  annotations:
+    iam.gke.io/gcp-service-account: "kagent-sa@mi-proyecto.iam.gserviceaccount.com"
+```
+
+#### Azure Workload Identity
+
+```yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: azure-agent-sa
+  namespace: kagent
+  annotations:
+    azure.workload.identity/client-id: "00000000-0000-0000-0000-000000000000"
+  labels:
+    azure.workload.identity/use: "true"
+```
+
+### 8. Restriccion de Namespaces
+
+Limita los namespaces que el controller puede observar:
+
+```yaml
+# values.yaml
+controller:
+  # Solo observar namespaces especificos
+  watchNamespaces:
+    - kagent
+    - agents-prod
+    - agents-staging
+  # Si esta vacio, observa TODOS los namespaces
+```
+
+### 9. Pod Security Standards
+
+Aplica estandares de seguridad a nivel de namespace:
+
+```yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kagent
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
+```
+
+### 10. Audit Logging
+
+kagent genera logs de auditoria para todas las operaciones:
+
+```yaml
+# values.yaml
+controller:
+  loglevel: "info"  # debug, info, warn, error
+
+otel:
+  tracing:
+    enabled: true
+    exporter:
+      otlp:
+        endpoint: http://otel-collector:4317
+  logging:
+    enabled: true
+    exporter:
+      otlp:
+        endpoint: http://otel-collector:4317
+```
+
+### Resumen de Caracteristicas de Seguridad
+
+| Caracteristica | Estado | Descripcion |
+|----------------|--------|-------------|
+| **TLS/mTLS** | ✅ Soportado | CA personalizado para proveedores LLM |
+| **RBAC** | ✅ Soportado | ClusterRoles getter/writer |
+| **Network Policies** | ✅ Soportado | Restriccion de trafico |
+| **Pod Security** | ✅ Soportado | SecurityContext, PSS |
+| **Secret Management** | ✅ Soportado | Secrets, ESO, Sealed Secrets |
+| **Cloud IAM** | ✅ Soportado | IRSA, Workload Identity |
+| **Multi-tenancy** | 🔄 En desarrollo | Issue #476 |
+| **Audit Logging** | ✅ Soportado | OpenTelemetry |
+| **Session Isolation** | 🔄 En desarrollo | Issue #476 |
+| **Signed Images** | 🔄 Planificado | Cosign keyless |
+| **SBOM** | 🔄 Planificado | Software Bill of Materials |
+
+### Referencias de Seguridad
+
+- [SECURITY.md](https://github.com/kagent-dev/kagent/blob/main/SECURITY.md) - Politica de seguridad
+- [Security Self-Assessment](https://github.com/kagent-dev/kagent/blob/main/contrib/cncf/security-self-assessment.md) - Evaluacion CNCF
+- [OpenSSF Best Practices](https://www.bestpractices.dev/projects/10723) - Certificacion OpenSSF
+
+---
+
 ## Referencia Rapida
 
 ### Tipos de MCP Server
 
-| Kind | Descripcion |
-|------|-------------|
-| `RemoteMCPServer` | CRD de kagent para MCP remoto |
-| `Service` | Service de K8s con anotaciones MCP |
-| `MCPServer` | Recurso de kmcp |
+| Kind | API Group | Descripcion | Ejemplo de uso en Agent |
+|------|-----------|-------------|-------------------------|
+| `RemoteMCPServer` | `kagent.dev` | CRD de kagent para MCP HTTP/SSE remoto | `kind: RemoteMCPServer, apiGroup: kagent.dev` |
+| `Service` | - | Service de K8s con anotaciones MCP | `kind: Service` |
+| `MCPServer` | `kmcp.dev` | Recurso de kmcp para stdio | `kind: MCPServer` |
+
+### Sintaxis de Tools en Agent
+
+```yaml
+# Usando RemoteMCPServer
+tools:
+  - type: McpServer
+    mcpServer:
+      name: mi-mcp-server
+      kind: RemoteMCPServer
+      apiGroup: kagent.dev
+      toolNames:
+        - tool1
+        - tool2
+
+# Usando Service de Kubernetes
+tools:
+  - type: McpServer
+    mcpServer:
+      name: mi-servicio-mcp
+      kind: Service
+```
 
 ### Condiciones de Status
 
@@ -1649,6 +2491,13 @@ spec:
 |-----------|-------------|
 | `Ready` | El agente esta listo para recibir requests |
 | `Accepted` | La configuracion ha sido validada |
+
+### Protocolos MCP Soportados
+
+| Protocolo | Descripcion | Default |
+|-----------|-------------|---------|
+| `SSE` | Server-Sent Events (legacy) | No |
+| `STREAMABLE_HTTP` | HTTP con streaming | Si |
 
 ### Limites
 

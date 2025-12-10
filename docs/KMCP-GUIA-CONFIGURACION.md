@@ -150,38 +150,34 @@ kmcp deploy --file my-mcp-server/kmcp.yaml --image my-mcp-server:latest
 
 Para entornos de produccion o cuando necesitas mayor control.
 
-#### 1. Agregar el Repositorio
+> **Nota:** kMCP usa un registro OCI (ghcr.io) en lugar de un repositorio Helm tradicional.
+
+#### 1. Crear el Namespace
 
 ```bash
-helm repo add kmcp https://kagent-dev.github.io/kmcp
-helm repo update
+kubectl create namespace kmcp-system
 ```
 
-#### 2. Instalar CRDs (Separado)
+#### 2. Instalar CRDs
 
-```bash
-helm install kmcp-crds kmcp/kmcp-crds \
-  --namespace kmcp-system \
-  --create-namespace
-```
-
-O directamente desde OCI:
 ```bash
 helm install kmcp-crds oci://ghcr.io/kagent-dev/kmcp/helm/kmcp-crds \
   --namespace kmcp-system \
-  --create-namespace
+  --version 0.2.2
 ```
 
 #### 3. Instalar el Controller
 
 ```bash
 # Instalacion basica
-helm install kmcp kmcp/kmcp \
-  --namespace kmcp-system
+helm install kmcp oci://ghcr.io/kagent-dev/kmcp/helm/kmcp \
+  --namespace kmcp-system \
+  --version 0.2.2
 
 # Instalacion con valores personalizados
-helm install kmcp kmcp/kmcp \
+helm install kmcp oci://ghcr.io/kagent-dev/kmcp/helm/kmcp \
   --namespace kmcp-system \
+  --version 0.2.2 \
   -f values.yaml
 ```
 
@@ -261,7 +257,9 @@ rbac:
 
 Para entornos GitOps y produccion enterprise.
 
-#### Opcion 1: Application Simple
+> **Nota:** kMCP usa un registro OCI (ghcr.io) en lugar de un repositorio Helm tradicional.
+
+#### Opcion 1: Application Simple (Multi-Source)
 
 ```yaml
 apiVersion: argoproj.io/v1alpha1
@@ -273,13 +271,13 @@ spec:
   project: default
   sources:
     # CRDs (se instalan primero)
-    - repoURL: https://kagent-dev.github.io/kmcp
+    - repoURL: ghcr.io/kagent-dev/kmcp/helm
       chart: kmcp-crds
-      targetRevision: 0.1.0
+      targetRevision: 0.2.2
     # Controller
-    - repoURL: https://kagent-dev.github.io/kmcp
+    - repoURL: ghcr.io/kagent-dev/kmcp/helm
       chart: kmcp
-      targetRevision: 0.1.0
+      targetRevision: 0.2.2
       helm:
         values: |
           controller:
@@ -305,7 +303,7 @@ spec:
       - ServerSideApply=true
 ```
 
-#### Opcion 2: Separar CRDs y Controller
+#### Opcion 2: Separar CRDs y Controller (Recomendado)
 
 **CRDs Application:**
 ```yaml
@@ -319,20 +317,19 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://kagent-dev.github.io/kmcp
+    repoURL: ghcr.io/kagent-dev/kmcp/helm
     chart: kmcp-crds
-    targetRevision: 0.1.0
+    targetRevision: 0.2.2
   destination:
     server: https://kubernetes.default.svc
     namespace: kmcp-system
   syncPolicy:
     automated:
-      prune: true
+      prune: false  # No eliminar CRDs automaticamente
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
-      - Replace=true
 ```
 
 **Controller Application:**
@@ -347,12 +344,15 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://kagent-dev.github.io/kmcp
+    repoURL: ghcr.io/kagent-dev/kmcp/helm
     chart: kmcp
-    targetRevision: 0.1.0
+    targetRevision: 0.2.2
     helm:
-      valueFiles:
-        - values-prod.yaml
+      values: |
+        controller:
+          replicaCount: 1
+          leaderElection:
+            enabled: true
   destination:
     server: https://kubernetes.default.svc
     namespace: kmcp-system
@@ -909,14 +909,16 @@ spec:
 ### Instalacion
 
 ```bash
-# Agregar repositorio
-helm repo add kmcp https://kagent-dev.github.io/kmcp
-
 # Instalar CRDs
-helm install kmcp-crds kmcp/kmcp-crds
+helm install kmcp-crds oci://ghcr.io/kagent-dev/kmcp/helm/kmcp-crds \
+  --namespace kmcp-system \
+  --create-namespace \
+  --version 0.2.2
 
 # Instalar controller
-helm install kmcp kmcp/kmcp -n kmcp-system --create-namespace
+helm install kmcp oci://ghcr.io/kagent-dev/kmcp/helm/kmcp \
+  --namespace kmcp-system \
+  --version 0.2.2
 ```
 
 ### Valores Configurables (values.yaml)
@@ -1246,46 +1248,98 @@ spec:
     cmd: /app/mcp-server
     port: 3000
 ---
-# RemoteMCPServer en kagent
-apiVersion: kagent.dev/v1alpha1
+# RemoteMCPServer en kagent (v1alpha2)
+apiVersion: kagent.dev/v1alpha2
 kind: RemoteMCPServer
 metadata:
   name: mi-mcp-remote
-  namespace: kagent-system
+  namespace: kagent
 spec:
-  transport:
-    type: sse
-    url: http://mi-mcp-server.mcp-servers.svc.cluster.local:3000/sse
+  url: http://mi-mcp-server.mcp-servers.svc.cluster.local:3000/mcp
+  description: "MCP Server desplegado con kMCP"
+  timeout: 30s
+  sseReadTimeout: 5m0s
 ---
-# Agent que usa el MCP Server
-apiVersion: kagent.dev/v1alpha1
+# Agent que usa el MCP Server (v1alpha2)
+apiVersion: kagent.dev/v1alpha2
 kind: Agent
 metadata:
   name: mi-agente
-  namespace: kagent-system
+  namespace: kagent
 spec:
-  modelConfigRef:
-    name: anthropic-claude
-  systemPrompt: "Eres un asistente que puede usar herramientas MCP"
-  remoteMcpServers:
-  - name: mi-mcp-remote
+  type: Declarative
+  description: "Agente con herramientas MCP"
+  declarative:
+    modelConfig: default-model-config
+    systemMessage: "Eres un asistente que puede usar herramientas MCP"
+    tools:
+      - type: McpServer
+        mcpServer:
+          name: mi-mcp-remote
+          kind: RemoteMCPServer
+          apiGroup: kagent.dev
+```
+
+### Conexion directa via Service
+
+Tambien puedes conectar el agente directamente a un Service de Kubernetes sin crear un RemoteMCPServer:
+
+```yaml
+# MCPServer desplegado con kMCP
+apiVersion: kagent.dev/v1alpha1
+kind: MCPServer
+metadata:
+  name: mi-mcp-server
+  namespace: mcp-servers
+spec:
+  transportType: stdio
+  stdioTransport: {}
+  deployment:
+    image: mi-registro/mcp-server:v1
+    cmd: /app/mcp-server
+    port: 3000
+---
+# Agent que usa el Service directamente
+apiVersion: kagent.dev/v1alpha2
+kind: Agent
+metadata:
+  name: mi-agente
+  namespace: kagent
+spec:
+  type: Declarative
+  description: "Agente con herramientas MCP via Service"
+  declarative:
+    modelConfig: default-model-config
+    systemMessage: "Eres un asistente que puede usar herramientas MCP"
+    tools:
+      - type: McpServer
+        mcpServer:
+          name: mi-mcp-server.mcp-servers  # namespace/nombre del Service
+          kind: Service
 ```
 
 ### Diagrama de Integracion
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                          kagent-system namespace                         │
+│                            kagent namespace                              │
 │                                                                          │
-│   ┌─────────────┐     ┌──────────────────┐     ┌─────────────────────┐ │
-│   │    Agent    │────►│  RemoteMCPServer │────►│  Service (external) │ │
-│   │             │     │   transport: sse │     │                     │ │
-│   └─────────────┘     └──────────────────┘     └─────────────────────┘ │
-│                                                           │             │
-└───────────────────────────────────────────────────────────│─────────────┘
-                                                            │
-                                                            │ HTTP/SSE
-                                                            ▼
+│   ┌─────────────┐     ┌──────────────────┐                              │
+│   │    Agent    │────►│  RemoteMCPServer │                              │
+│   │  (v1alpha2) │     │    (v1alpha2)    │                              │
+│   │             │     │ url: http://...  │                              │
+│   │  tools:     │     └──────────────────┘                              │
+│   │  - McpServer│                │                                      │
+│   │    kind: Rem│                │                                      │
+│   └─────────────┘                │                                      │
+│         │                        │                                      │
+│         │ (o directamente)       │                                      │
+│         │ kind: Service          │                                      │
+│         ▼                        ▼                                      │
+└─────────────────────────────────────────────────────────────────────────┘
+                                   │
+                                   │ HTTP (Streamable HTTP)
+                                   ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                         mcp-servers namespace                            │
 │                                                                          │
@@ -1441,6 +1495,7 @@ kubectl get all -n mcp-servers -l app.kubernetes.io/instance=filesystem-mcp
 
 | Caracteristica | kMCP MCPServer | ToolServer (DEPRECADO) | RemoteMCPServer |
 |----------------|----------------|------------------------|-----------------|
+| API Version | `kagent.dev/v1alpha1` | `kagent.dev/v1alpha1` | `kagent.dev/v1alpha2` |
 | Transporte | stdio (convertido a HTTP) o HTTP | stdio o HTTP | HTTP/SSE |
 | Despliega pods | Si | Si | No |
 | Transport Adapter | Automatico | Manual | N/A |
@@ -1451,7 +1506,8 @@ kubectl get all -n mcp-servers -l app.kubernetes.io/instance=filesystem-mcp
 
 **Recomendacion**:
 - Usa **kMCP MCPServer** para desplegar servidores MCP basados en stdio en Kubernetes
-- Usa **RemoteMCPServer** para conectar kagent a servidores MCP ya existentes (desplegados con kMCP u otros)
+- Usa **RemoteMCPServer** (v1alpha2) para conectar kagent a servidores MCP ya existentes (desplegados con kMCP u otros)
+- Usa **Service** directamente en el Agent para conectar a MCP servers en el mismo cluster sin crear RemoteMCPServer
 
 ---
 
