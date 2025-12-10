@@ -37,7 +37,7 @@ servers:
     transportType: http
     image:
       repository: ghcr.io/jeanlopezxyz/mcp-prometheus
-      tag: "1.0.7"
+      tag: "1.0.8"
     port: 9081
     env:
       PROMETHEUS_URL: "https://thanos-querier.openshift-monitoring.svc.cluster.local:9091"
@@ -66,7 +66,7 @@ servers:
     transportType: http
     image:
       repository: ghcr.io/jeanlopezxyz/mcp-alertmanager
-      tag: "1.0.12"
+      tag: "1.0.13"
     port: 9082
     env:
       ALERTMANAGER_URL: "https://alertmanager-main.openshift-monitoring.svc.cluster.local:9094"
