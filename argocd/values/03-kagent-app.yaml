@@ -205,15 +205,16 @@ agent:
       cpu: 1000m
       memory: 1Gi
 
-# MCPServer references (conexiones del agente a los MCP servers de kmcp)
-# useKmcp: true -> usa MCPServer de kmcp (cross-namespace)
-# useKmcp: false -> usa RemoteMCPServer (HTTP directo)
+# RemoteMCPServer definitions (HTTP connections to kmcp MCP servers)
+# terminateOnClose: false to keep sessions alive for multiple tool calls
 mcpServers:
   prometheus:
     enabled: true
-    useKmcp: true  # Use kmcp MCPServer
-    kmcpName: prometheus-mcp
-    kmcpNamespace: k2a-mcp-servers
+    name: prometheus-mcp-server
+    description: "Prometheus MCP server for querying metrics"
+    url: "http://prometheus-mcp.k2a-mcp-servers.svc.cluster.local:9081/mcp"
+    timeout: "60s"
+    sseReadTimeout: "5m"
     tools:
       - query
       - queryRange
@@ -223,9 +224,11 @@ mcpServers:
 
   alertmanager:
     enabled: true
-    useKmcp: true  # Use kmcp MCPServer
-    kmcpName: alertmanager-mcp
-    kmcpNamespace: k2a-mcp-servers
+    name: alertmanager-mcp-server
+    description: "AlertManager MCP server for managing alerts"
+    url: "http://alertmanager-mcp.k2a-mcp-servers.svc.cluster.local:9082/mcp"
+    timeout: "60s"
+    sseReadTimeout: "5m"
     tools:
       - getAlerts
       - getAlertGroups
@@ -237,9 +240,11 @@ mcpServers:
 
   redhatCases:
     enabled: true
-    useKmcp: true  # Use kmcp MCPServer
-    kmcpName: redhat-cases-mcp
-    kmcpNamespace: k2a-mcp-servers
+    name: redhat-cases-mcp-server
+    description: "Red Hat Cases MCP server for KB and support"
+    url: "http://redhat-cases-mcp.k2a-mcp-servers.svc.cluster.local:9080/mcp"
+    timeout: "60s"
+    sseReadTimeout: "5m"
     tools:
       - searchKnowledgeBase
       - getSolution
@@ -256,9 +261,9 @@ mcpServers:
 
   sessionize:
     enabled: false  # Temporarily disabled
-    useKmcp: true
-    kmcpName: sessionize-mcp
-    kmcpNamespace: k2a-mcp-servers
+    name: sessionize-mcp-server
+    description: "Sessionize MCP server for conference data"
+    url: "http://sessionize-mcp.k2a-mcp-servers.svc.cluster.local:8080/mcp"
     tools:
       - getSpeakers
       - findSpeaker

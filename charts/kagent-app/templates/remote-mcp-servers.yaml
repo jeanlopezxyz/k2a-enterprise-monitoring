@@ -1,0 +1,21 @@
+{{- range $key, $server := .Values.mcpServers }}
+{{- if $server.enabled }}
+---
+apiVersion: kagent.dev/v1alpha2
+kind: RemoteMCPServer
+metadata:
+  name: {{ $server.name }}
+  namespace: {{ $.Values.agent.namespace | default $.Values.global.namespace }}
+  labels:
+    {{- include "k2a-agent.labels" $ | nindent 4 }}
+spec:
+  url: {{ $server.url | quote }}
+  description: {{ $server.description | default (printf "MCP Server for %s" $server.name) | quote }}
+  protocol: STREAMABLE_HTTP
+  # Increased timeout for stable connections
+  timeout: {{ $server.timeout | default "60s" }}
+  sseReadTimeout: {{ $server.sseReadTimeout | default "5m" }}
+  # Don't terminate on close to allow multiple calls
+  terminateOnClose: false
+{{- end }}
+{{- end }}
