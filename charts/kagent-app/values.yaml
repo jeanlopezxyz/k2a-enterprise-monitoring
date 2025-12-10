@@ -5,10 +5,24 @@ global:
   namespace: kagent
   mcpServersNamespace: k2a-mcp-servers
 
+# ModelConfig - Configuracion del modelo LLM
+# IMPORTANTE: El secret debe crearse ANTES de desplegar el chart
+# kubectl create secret generic kagent-openai-secret --namespace kagent --from-literal=api-key="sk-..."
+modelConfig:
+  create: true
+  name: default-model-config
+  provider: openai        # openai, anthropic, azure-openai, etc.
+  model: gpt-4o           # Modelo a usar
+  secretRef:
+    name: kagent-openai-secret   # Nombre del secret existente
+    key: api-key                 # Key dentro del secret
+  # temperature: 0.7
+  # maxTokens: 4096
+
 # Agent configuration defaults
 agent:
   name: k2a-enterprise-monitoring
-  modelConfig: default-model-config
+  modelConfig: default-model-config  # Debe coincidir con modelConfig.name
   systemMessage: ""
   resources:
     requests:

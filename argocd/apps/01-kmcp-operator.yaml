@@ -1,0 +1,83 @@
+# =============================================================================
+# kmcp - Kubernetes MCP Controller
+# =============================================================================
+#
+# Wave: -1 (se instala primero)
+# Namespace: kmcp-system
+# Values: argocd/values/01-kmcp-operator.yaml
+#
+# Instala kmcp completo (CRDs + Controller) para gestionar MCP servers
+# con transporte stdio/http en Kubernetes.
+#
+# Componentes instalados:
+#   - CRD: kagent.dev/MCPServer
+#   - Controller: kmcp-controller-manager
+#   - RBAC: ClusterRoles, RoleBindings
+#   - Service: Metrics endpoint
+#
+# =============================================================================
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kmcp
+  namespace: openshift-gitops
+  labels:
+    app.kubernetes.io/name: kmcp
+    app.kubernetes.io/part-of: k2a-enterprise-monitoring
+    app.kubernetes.io/component: mcp-controller
+  annotations:
+    # Sync wave: kmcp debe instalarse primero (antes de kagent y k2a)
+    argocd.argoproj.io/sync-wave: "-1"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: k2a-enterprise-monitoring
+
+  # Multiples fuentes: CRDs + Controller (Helm repository)
+  sources:
+    # 1. CRDs (se aplican primero por ServerSideApply)
+    - repoURL: https://charts.kagent.dev
+      chart: kmcp-crds
+      targetRevision: 0.2.2
+
+    # 2. Referencia al repo con los values
+    - repoURL: https://github.com/jeanlopezxyz/k2a-enterprise-monitoring.git
+      targetRevision: main
+      ref: values
+
+    # 3. Controller
+    - repoURL: https://charts.kagent.dev
+      chart: kmcp
+      targetRevision: 0.2.2
+      helm:
+        valueFiles:
+          - $values/argocd/values/01-kmcp-operator.yaml
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kmcp-system
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+
+  ignoreDifferences:
+    - group: kagent.dev
+      kind: MCPServer
+      jsonPointers:
+        - /status
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas

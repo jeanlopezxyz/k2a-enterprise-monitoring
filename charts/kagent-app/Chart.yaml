@@ -1,0 +1,31 @@
+# =============================================================================
+# kagent-app - K2A Agent para kagent
+# =============================================================================
+#
+# Este chart crea el Agent CR (Custom Resource) para kagent.
+# kagent controller gestiona el ciclo de vida del agente.
+#
+# Prerequisitos:
+#   - kagent operator instalado (namespace: kagent)
+#   - CRDs: Agent, ModelConfig, RemoteMCPServer
+#   - Secret con API key del LLM
+#
+# =============================================================================
+
+apiVersion: v2
+name: kagent-app
+description: K2A Agent Application for kagent (Agent CR)
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+
+keywords:
+  - kagent
+  - agent
+  - k2a
+  - monitoring
+  - ai-agent
+
+maintainers:
+  - name: Jean Lopez
+    url: https://github.com/jeanlopezxyz

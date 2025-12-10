@@ -1,0 +1,21 @@
+{{- if .Values.modelConfig.create }}
+apiVersion: kagent.dev/v1alpha2
+kind: ModelConfig
+metadata:
+  name: {{ .Values.modelConfig.name }}
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "k2a-agent.labels" . | nindent 4 }}
+spec:
+  provider: {{ .Values.modelConfig.provider }}
+  model: {{ .Values.modelConfig.model }}
+  apiKeySecretRef:
+    name: {{ .Values.modelConfig.secretRef.name }}
+    key: {{ .Values.modelConfig.secretRef.key }}
+  {{- if .Values.modelConfig.temperature }}
+  temperature: {{ .Values.modelConfig.temperature }}
+  {{- end }}
+  {{- if .Values.modelConfig.maxTokens }}
+  maxTokens: {{ .Values.modelConfig.maxTokens }}
+  {{- end }}
+{{- end }}

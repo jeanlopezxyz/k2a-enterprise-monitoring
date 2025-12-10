@@ -1,0 +1,103 @@
+# =============================================================================
+# kagent - Kubernetes AI Agent Framework
+# =============================================================================
+#
+# Wave: 0 (se instala despues de kmcp)
+# Namespace: kagent
+# Values: argocd/values/02-kagent-operator.yaml
+#
+# Instala kagent completo para gestionar agentes de IA en Kubernetes.
+#
+# Componentes instalados:
+#   - CRDs: Agent, ModelConfig, RemoteMCPServer, ToolServer
+#   - Controller: kagent-controller-manager
+#   - UI: kagent-ui (interfaz web)
+#   - Tools: Built-in Kubernetes tools
+#   - RBAC: ClusterRoles, RoleBindings
+#
+# Prerequisito:
+#   kubectl create secret generic kagent-openai-secret \
+#     --namespace kagent \
+#     --from-literal=api-key="${OPENAI_API_KEY}"
+#
+# =============================================================================
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kagent
+  namespace: openshift-gitops
+  labels:
+    app.kubernetes.io/name: kagent
+    app.kubernetes.io/part-of: k2a-enterprise-monitoring
+    app.kubernetes.io/component: kagent-operator
+  annotations:
+    # Sync wave: kagent se instala despues de kmcp
+    argocd.argoproj.io/sync-wave: "0"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: k2a-enterprise-monitoring
+
+  sources:
+    # 1. CRDs de kagent (Helm repository)
+    - repoURL: https://charts.kagent.dev
+      chart: kagent-crds
+      targetRevision: 0.7.6
+
+    # 2. Referencia al repo con los values
+    - repoURL: https://github.com/jeanlopezxyz/k2a-enterprise-monitoring.git
+      targetRevision: main
+      ref: values
+
+    # 3. kagent Helm chart (Controller, UI, Tools)
+    - repoURL: https://charts.kagent.dev
+      chart: kagent
+      targetRevision: 0.7.6
+      helm:
+        valueFiles:
+          - $values/argocd/values/02-kagent-operator.yaml
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kagent
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - RespectIgnoreDifferences=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+
+  ignoreDifferences:
+    # Ignore status fields
+    - group: kagent.dev
+      kind: Agent
+      jsonPointers:
+        - /status
+    - group: kagent.dev
+      kind: ModelConfig
+      jsonPointers:
+        - /status
+    - group: kagent.dev
+      kind: RemoteMCPServer
+      jsonPointers:
+        - /status
+    - group: kagent.dev
+      kind: ToolServer
+      jsonPointers:
+        - /status
+    # Ignore replicas managed by HPA
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas

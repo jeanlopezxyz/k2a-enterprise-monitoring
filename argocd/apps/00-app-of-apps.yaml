@@ -1,0 +1,89 @@
+# =============================================================================
+# K2A Enterprise Monitoring - App-of-Apps
+# =============================================================================
+#
+# Este archivo despliega todo el stack de K2A Enterprise Monitoring.
+# Usa el patron App-of-Apps de ArgoCD para gestionar multiples aplicaciones.
+#
+# ORDEN DE DESPLIEGUE (Sync Waves):
+# ---------------------------------
+#   Wave -1: kmcp             → Operador kmcp (CRDs + Controller)
+#   Wave  0: kagent           → Operador kagent (Controller, UI, Tools, CRDs)
+#   Wave  1: kagent-app       → Aplicacion (KMCP Servers + Agent)
+#
+# RELACION DE ARCHIVOS:
+# ---------------------
+#   argocd/
+#   ├── project.yaml                    # AppProject (aplicar primero)
+#   ├── apps/
+#   │   ├── 00-app-of-apps.yaml         # Este archivo (orquestador)
+#   │   ├── 01-kmcp-operator.yaml       # → values/01-kmcp-operator.yaml
+#   │   ├── 02-kagent-operator.yaml     # → values/02-kagent-operator.yaml
+#   │   └── 03-kagent-app.yaml          # → values/03-kagent-app.yaml
+#   └── values/
+#       ├── 01-kmcp-operator.yaml
+#       ├── 02-kagent-operator.yaml
+#       └── 03-kagent-app.yaml
+#
+#   charts/
+#   ├── kmcp-servers/                   # MCPServer CRs (desplegado por 03-kagent-app)
+#   └── kagent-app/                     # Agent CR (desplegado por 03-kagent-app)
+#
+# USO:
+# ----
+#   # Desplegar todo el stack
+#   kubectl apply -f argocd/project.yaml
+#   kubectl apply -f argocd/apps/00-app-of-apps.yaml
+#
+# PREREQUISITOS:
+# --------------
+#   1. Crear el secret de OpenAI en el namespace kagent:
+#      kubectl create namespace kagent
+#      kubectl create secret generic kagent-openai-secret \
+#        --namespace kagent \
+#        --from-literal=api-key="${OPENAI_API_KEY}"
+#
+# =============================================================================
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: k2a-stack
+  namespace: openshift-gitops
+  labels:
+    app.kubernetes.io/name: k2a-stack
+    app.kubernetes.io/part-of: k2a-enterprise-monitoring
+    app.kubernetes.io/component: app-of-apps
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  # Usa el mismo proyecto que las apps hijas
+  project: k2a-enterprise-monitoring
+
+  source:
+    repoURL: https://github.com/jeanlopezxyz/k2a-enterprise-monitoring.git
+    targetRevision: main
+    path: argocd/apps
+    directory:
+      recurse: false
+      # Solo incluye las apps hijas (no este archivo)
+      include: '{01-*.yaml,02-*.yaml,03-*.yaml}'
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: openshift-gitops
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=false
+      # Aplicar en orden de sync-wave
+      - ApplyOutOfSyncOnly=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m

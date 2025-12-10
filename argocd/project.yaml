@@ -1,47 +1,122 @@
+# =============================================================================
+# K2A Enterprise Monitoring - ArgoCD AppProject
+# =============================================================================
+#
+# Define el proyecto ArgoCD que agrupa todas las aplicaciones del stack K2A.
+# Este proyecto debe aplicarse ANTES que las aplicaciones.
+#
+# USO:
+#   kubectl apply -f argocd/project.yaml
+#
+# =============================================================================
+
 apiVersion: argoproj.io/v1alpha1
 kind: AppProject
 metadata:
   name: k2a-enterprise-monitoring
   namespace: openshift-gitops
   labels:
+    app.kubernetes.io/name: k2a-enterprise-monitoring
     app.kubernetes.io/part-of: k2a-enterprise-monitoring
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
   description: K2A Enterprise Monitoring - AI-powered Kubernetes monitoring
+
+  # ============================================
+  # SOURCE REPOSITORIES
+  # ============================================
   sourceRepos:
+    # Git repository (HTTPS y SSH)
     - 'https://github.com/jeanlopezxyz/k2a-enterprise-monitoring.git'
     - 'git@github.com:jeanlopezxyz/k2a-enterprise-monitoring.git'
+    # Helm chart repository (kagent + kmcp)
+    - 'https://charts.kagent.dev'
+
+  # ============================================
+  # DESTINATION NAMESPACES
+  # ============================================
   destinations:
-    - namespace: k2a-mcp-servers
+    # ArgoCD namespace (para las Applications)
+    - namespace: openshift-gitops
       server: https://kubernetes.default.svc
+    # kmcp operator
+    - namespace: kmcp-system
+      server: https://kubernetes.default.svc
+    # kagent operator
     - namespace: kagent
       server: https://kubernetes.default.svc
+    # KMCP Servers (MCP servers)
+    - namespace: k2a-mcp-servers
+      server: https://kubernetes.default.svc
+    # Wildcard para otros namespaces si es necesario
     - namespace: '*'
       server: https://kubernetes.default.svc
+
+  # ============================================
+  # CLUSTER RESOURCE WHITELIST
+  # ============================================
   clusterResourceWhitelist:
+    # Namespaces
     - group: ''
       kind: Namespace
+    # RBAC
     - group: rbac.authorization.k8s.io
       kind: ClusterRole
     - group: rbac.authorization.k8s.io
       kind: ClusterRoleBinding
+    # CRDs (requeridos para kmcp y kagent)
+    - group: apiextensions.k8s.io
+      kind: CustomResourceDefinition
+    # Admission webhooks
+    - group: admissionregistration.k8s.io
+      kind: MutatingWebhookConfiguration
+    - group: admissionregistration.k8s.io
+      kind: ValidatingWebhookConfiguration
+
+  # ============================================
+  # NAMESPACE RESOURCE WHITELIST
+  # ============================================
   namespaceResourceWhitelist:
+    # Core resources
     - group: ''
       kind: '*'
+    # Apps (Deployments, StatefulSets, etc.)
     - group: apps
       kind: '*'
+    # Batch (Jobs, CronJobs)
+    - group: batch
+      kind: '*'
+    # kagent CRDs (Agent, ModelConfig, RemoteMCPServer, ToolServer)
     - group: kagent.dev
       kind: '*'
+    # OpenShift Build
     - group: build.openshift.io
       kind: '*'
+    # OpenShift ImageStream
     - group: image.openshift.io
       kind: '*'
+    # Networking (NetworkPolicy, Ingress)
     - group: networking.k8s.io
       kind: '*'
+    # Monitoring (ServiceMonitor, PrometheusRule)
     - group: monitoring.coreos.com
       kind: '*'
+    # Autoscaling (HPA)
     - group: autoscaling
       kind: '*'
+    # Policy (PodDisruptionBudget)
     - group: policy
       kind: '*'
+    # Coordination (for leader election)
+    - group: coordination.k8s.io
+      kind: '*'
+    # Certificates
+    - group: cert-manager.io
+      kind: '*'
+
+  # ============================================
+  # ORPHANED RESOURCES
+  # ============================================
+  orphanedResources:
+    warn: true

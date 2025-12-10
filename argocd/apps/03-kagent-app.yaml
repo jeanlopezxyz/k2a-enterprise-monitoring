@@ -1,0 +1,96 @@
+# =============================================================================
+# kagent-app - KMCP Servers + Agent
+# =============================================================================
+#
+# Wave: 1 (se instala al final, despues de kmcp y kagent operators)
+# Namespaces: k2a-mcp-servers, kagent
+# Values: argocd/values/03-kagent-app.yaml
+# Charts: charts/kmcp-servers, charts/kagent-app
+#
+# Despliega:
+#   - KMCP Servers: MCPServer CRs (Prometheus, AlertManager, Red Hat Cases)
+#   - kagent App: Agent CR con herramientas MCP
+#
+# Prerequisitos (instalados en waves anteriores):
+#   - Wave -1: kmcp operator (CRD MCPServer)
+#   - Wave  0: kagent operator (CRDs Agent, ModelConfig, RemoteMCPServer)
+#
+# =============================================================================
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kagent-app
+  namespace: openshift-gitops
+  labels:
+    app.kubernetes.io/name: kagent-app
+    app.kubernetes.io/part-of: k2a-enterprise-monitoring
+    app.kubernetes.io/component: application
+  annotations:
+    # Sync wave: kagent-app se instala al final
+    argocd.argoproj.io/sync-wave: "1"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: k2a-enterprise-monitoring
+
+  sources:
+    # 1. KMCP Servers (MCPServer CRs - Prometheus, AlertManager, Red Hat Cases)
+    - repoURL: https://github.com/jeanlopezxyz/k2a-enterprise-monitoring.git
+      targetRevision: main
+      path: charts/kmcp-servers
+      helm:
+        valueFiles:
+          - values.yaml
+          - ../../argocd/values/03-kagent-app.yaml
+
+    # 2. kagent App (Agent CR)
+    - repoURL: https://github.com/jeanlopezxyz/k2a-enterprise-monitoring.git
+      targetRevision: main
+      path: charts/kagent-app
+      helm:
+        valueFiles:
+          - values.yaml
+          - ../../argocd/values/03-kagent-app.yaml
+
+  destination:
+    server: https://kubernetes.default.svc
+    # Nota: Cada chart define su propio namespace en values
+    # - kmcp-servers → k2a-mcp-servers
+    # - kagent-app → kagent
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas
+    - group: kagent.dev
+      kind: Agent
+      jsonPointers:
+        - /status
+    - group: kagent.dev
+      kind: MCPServer
+      jsonPointers:
+        - /status
+    - group: kagent.dev
+      kind: RemoteMCPServer
+      jsonPointers:
+        - /status
+    - group: kagent.dev
+      kind: ModelConfig
+      jsonPointers:
+        - /status

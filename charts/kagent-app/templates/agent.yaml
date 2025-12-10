@@ -24,21 +24,39 @@ spec:
         {{- end }}
     {{- end }}
     {{- end }}
+    {{- if .Values.a2aSkills }}
     a2aConfig:
       skills:
       {{- range .Values.a2aSkills }}
       - id: {{ .id }}
         name: {{ .name }}
-        description: {{ .description }}
+        description: {{ .description | quote }}
+        {{- if .examples }}
         examples:
         {{- range .examples }}
-        - {{ . }}
+        - {{ . | quote }}
         {{- end }}
+        {{- end }}
+        {{- if .tags }}
         tags:
         {{- range .tags }}
         - {{ . }}
         {{- end }}
+        {{- end }}
+        {{- if .inputModes }}
+        inputModes:
+        {{- range .inputModes }}
+        - {{ . }}
+        {{- end }}
+        {{- end }}
+        {{- if .outputModes }}
+        outputModes:
+        {{- range .outputModes }}
+        - {{ . }}
+        {{- end }}
+        {{- end }}
       {{- end }}
+    {{- end }}
     deployment:
       resources:
         {{- toYaml .Values.agent.resources | nindent 8 }}
