@@ -69,11 +69,10 @@ spec:
     {{- end }}
 
     {{- if $server.env }}
-    # Variables de entorno
+    # Variables de entorno (map format)
     env:
       {{- range $envKey, $envValue := $server.env }}
-      - name: {{ $envKey }}
-        value: {{ $envValue | quote }}
+      {{ $envKey }}: {{ $envValue | quote }}
       {{- end }}
     {{- end }}
 
@@ -103,12 +102,6 @@ spec:
     # Montajes de volumenes
     volumeMounts:
       {{- toYaml $server.volumeMounts | nindent 6 }}
-    {{- end }}
-
-    {{- if $server.resources }}
-    # Recursos (CPU/Memory)
-    resources:
-      {{- toYaml $server.resources | nindent 6 }}
     {{- end }}
 
     {{- if $server.serviceAccount }}
