@@ -236,7 +236,7 @@ mcpServers:
       - getAlertmanagerStatus
 
   redhatCases:
-    enabled: true
+    enabled: false  # Temporarily disabled - missing secret redhat-cases-mcp-secrets
     name: redhat-cases-mcp  # Debe coincidir con servers.redhatCases.name
     tools:
       - searchKnowledgeBase
