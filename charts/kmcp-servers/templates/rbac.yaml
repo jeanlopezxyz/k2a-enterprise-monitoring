@@ -44,4 +44,23 @@ roleRef:
   name: {{ .Values.rbac.clusterRoleBinding.clusterRole }}
   apiGroup: rbac.authorization.k8s.io
 {{- end }}
+{{- if and .Values.servers.kubernetes .Values.servers.kubernetes.enabled }}
+---
+# ClusterRoleBinding for Kubernetes MCP Server (cluster-admin access)
+# kubernetes-mcp-server needs full cluster access to manage resources
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ .Values.global.namespace }}-kubernetes-admin
+  labels:
+    {{- include "kmcp-servers.labels" . | nindent 4 }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Values.servers.kubernetes.name }}
+    namespace: {{ .Values.global.namespace }}
+roleRef:
+  kind: ClusterRole
+  name: cluster-admin
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}
 {{- end }}

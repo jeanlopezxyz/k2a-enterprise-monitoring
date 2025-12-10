@@ -156,6 +156,51 @@ servers:
         cpu: 500m
         memory: 256Mi
 
+  # ------------------------------------------
+  # Kubernetes MCP Server (Go Native)
+  # ------------------------------------------
+  # NOTA: Usando HTTP transport directo
+  # Go nativo expone HTTP en /mcp endpoint con /healthz health check
+  kubernetes:
+    enabled: true
+    name: kubernetes-mcp
+    description: "MCP Server para gestion de Kubernetes/OpenShift (Go Native)"
+    transportType: http
+    image:
+      repository: quay.io/containers/kubernetes_mcp_server
+      tag: "latest"
+    port: 8080  # Puerto HTTP nativo de Go
+    httpTransport:
+      targetPort: 8080
+      path: /mcp
+    env:
+      # Enable OpenShift specific features
+      OPENSHIFT: "true"
+    # ServiceAccount needs cluster-admin or appropriate RBAC
+    serviceAccount:
+      create: true
+      name: kubernetes-mcp
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi
+    # Custom health check path for Go server
+    livenessProbe:
+      httpGet:
+        path: /healthz
+        port: 8080
+      initialDelaySeconds: 10
+      periodSeconds: 30
+    readinessProbe:
+      httpGet:
+        path: /healthz
+        port: 8080
+      initialDelaySeconds: 5
+      periodSeconds: 10
+
 # =============================================================================
 # SECCION 2: K2A AGENT (chart: kagent-app)
 # =============================================================================
@@ -203,6 +248,26 @@ agent:
     - getTargets: Get scrape target status
     - getPrometheusStatus: Check Prometheus health
 
+    KUBERNETES (for cluster management):
+    - configuration_view: View current kubeconfig context
+    - configuration_set_namespace: Set default namespace
+    - pods_list: List pods in namespace
+    - pods_get: Get pod details
+    - pods_log: Get pod logs
+    - pods_run: Run a new pod
+    - pods_exec: Execute command in pod
+    - pods_delete: Delete a pod
+    - resources_list: List any Kubernetes resources
+    - resources_get: Get resource details
+    - resources_create_or_update: Create or update resources
+    - resources_delete: Delete resources
+    - events_list: List cluster events
+    - helm_install: Install Helm chart
+    - helm_uninstall: Uninstall Helm release
+    - helm_list: List Helm releases
+    - helm_status: Get Helm release status
+    - helm_rollback: Rollback Helm release
+
     RED HAT SUPPORT (for KB and cases):
     - searchKnowledgeBase: Search Red Hat KB articles
     - getSolution: Get full KB article content
@@ -214,6 +279,9 @@ agent:
     Tool Selection Rules:
     - For ALERTS: Use getAlerts or getAlertGroups
     - For METRICS: Use query or queryRange
+    - For KUBERNETES RESOURCES: Use pods_list, resources_list, resources_get
+    - For POD TROUBLESHOOTING: Use pods_log, pods_exec
+    - For HELM: Use helm_list, helm_status
     - For RED HAT KB: Use searchKnowledgeBase
     - For SUPPORT CASES: Use searchCases, createCase, getCase
 
@@ -279,6 +347,31 @@ mcpServers:
       - findSession
       - getSchedule
 
+  kubernetes:
+    enabled: true
+    name: kubernetes-mcp  # Debe coincidir con servers.kubernetes.name
+    tools:
+      # Core Kubernetes tools
+      - configuration_view
+      - configuration_set_namespace
+      - pods_list
+      - pods_get
+      - pods_log
+      - pods_run
+      - pods_exec
+      - pods_delete
+      - resources_list
+      - resources_get
+      - resources_create_or_update
+      - resources_delete
+      - events_list
+      # Helm tools
+      - helm_install
+      - helm_uninstall
+      - helm_list
+      - helm_status
+      - helm_rollback
+
 # A2A Skills
 a2aSkills:
   - id: alert-monitoring
@@ -335,6 +428,24 @@ a2aSkills:
       - conference
       - sessionize
       - speakers
+    inputModes:
+      - text
+    outputModes:
+      - text
+
+  - id: kubernetes-management
+    name: Kubernetes Management
+    description: Manage Kubernetes/OpenShift cluster resources, pods, deployments, and Helm releases
+    examples:
+      - List pods in namespace default
+      - Get logs from pod nginx
+      - Show deployment status
+      - List Helm releases
+    tags:
+      - kubernetes
+      - openshift
+      - pods
+      - helm
     inputModes:
       - text
     outputModes:
