@@ -329,7 +329,7 @@ a2aSkills:
 # =============================================================================
 
 networkPolicy:
-  enabled: true
+  enabled: false  # Disabled - was blocking traffic from kagent namespace
 
 monitoring:
   serviceMonitor:
