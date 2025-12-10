@@ -79,8 +79,7 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=false
-      # Aplicar en orden de sync-wave
-      - ApplyOutOfSyncOnly=true
+      - ServerSideApply=true
     retry:
       limit: 5
       backoff:
