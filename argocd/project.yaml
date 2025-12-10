@@ -108,6 +108,9 @@ spec:
     # OpenShift ImageStream
     - group: image.openshift.io
       kind: '*'
+    # OpenShift Routes
+    - group: route.openshift.io
+      kind: '*'
     # Networking (NetworkPolicy, Ingress)
     - group: networking.k8s.io
       kind: '*'
