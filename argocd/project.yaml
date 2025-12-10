@@ -53,9 +53,6 @@ spec:
     # KMCP Servers (MCP servers)
     - namespace: k2a-mcp-servers
       server: https://kubernetes.default.svc
-    # Wildcard para otros namespaces si es necesario
-    - namespace: '*'
-      server: https://kubernetes.default.svc
 
   # ============================================
   # CLUSTER RESOURCE WHITELIST
