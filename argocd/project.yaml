@@ -130,5 +130,7 @@ spec:
   # ============================================
   # ORPHANED RESOURCES
   # ============================================
+  # Disabled: OpenShift creates automatic resources (ServiceAccounts, Secrets, etc.)
+  # that are not managed by ArgoCD and would trigger false warnings
   orphanedResources:
-    warn: true
+    warn: false
