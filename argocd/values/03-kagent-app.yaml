@@ -30,24 +30,25 @@ servers:
   # ------------------------------------------
   # Prometheus MCP Server (Quarkus Native)
   # ------------------------------------------
+  # NOTA: Usando stdio transport con kmcp Transport Adapter
+  # El adapter convierte stdio a HTTP/SSE para kagent
   prometheus:
     enabled: true
     name: prometheus-mcp
     description: "MCP Server para consultas PromQL a Prometheus/Thanos (Quarkus Native)"
-    transportType: http
+    transportType: stdio
     image:
       repository: ghcr.io/jeanlopezxyz/mcp-prometheus
       tag: "1.0.8"
-    port: 9081
+    port: 3000  # Puerto del Transport Adapter
     env:
       PROMETHEUS_URL: "https://thanos-querier.openshift-monitoring.svc.cluster.local:9091"
-      QUARKUS_HTTP_HOST: "0.0.0.0"
-      QUARKUS_HTTP_PORT: "9081"
+      # Habilitar stdio transport para Quarkus MCP
+      QUARKUS_MCP_SERVER_STDIO_ENABLED: "true"
+      # Deshabilitar HTTP ya que usamos stdio
+      QUARKUS_HTTP_HOST_ENABLED: "false"
       # Trust OpenShift internal SSL certificates
       QUARKUS_TLS_TRUST_ALL: "true"
-    httpTransport:
-      targetPort: 9081
-      path: /mcp
     resources:
       requests:
         cpu: 50m
@@ -59,24 +60,25 @@ servers:
   # ------------------------------------------
   # AlertManager MCP Server (Quarkus Native)
   # ------------------------------------------
+  # NOTA: Usando stdio transport con kmcp Transport Adapter
+  # El adapter convierte stdio a HTTP/SSE para kagent
   alertmanager:
     enabled: true
     name: alertmanager-mcp
     description: "MCP Server para AlertManager (Quarkus Native)"
-    transportType: http
+    transportType: stdio
     image:
       repository: ghcr.io/jeanlopezxyz/mcp-alertmanager
       tag: "1.0.13"
-    port: 9082
+    port: 3000  # Puerto del Transport Adapter
     env:
       ALERTMANAGER_URL: "https://alertmanager-main.openshift-monitoring.svc.cluster.local:9094"
-      QUARKUS_HTTP_HOST: "0.0.0.0"
-      QUARKUS_HTTP_PORT: "9082"
+      # Habilitar stdio transport para Quarkus MCP
+      QUARKUS_MCP_SERVER_STDIO_ENABLED: "true"
+      # Deshabilitar HTTP ya que usamos stdio
+      QUARKUS_HTTP_HOST_ENABLED: "false"
       # Trust OpenShift internal SSL certificates
       QUARKUS_TLS_TRUST_ALL: "true"
-    httpTransport:
-      targetPort: 9082
-      path: /mcp
     resources:
       requests:
         cpu: 50m
@@ -88,23 +90,24 @@ servers:
   # ------------------------------------------
   # Red Hat Cases MCP Server (Quarkus Native)
   # ------------------------------------------
+  # NOTA: Usando stdio transport con kmcp Transport Adapter
+  # El adapter convierte stdio a HTTP/SSE para kagent
   redhatCases:
     enabled: true
     name: redhat-cases-mcp
     description: "MCP Server para Red Hat KB y casos de soporte (Quarkus Native)"
-    transportType: http
+    transportType: stdio
     image:
       repository: ghcr.io/jeanlopezxyz/mcp-redhat-cases
       tag: "1.0.4"
-    port: 9080
+    port: 3000  # Puerto del Transport Adapter
     env:
-      QUARKUS_HTTP_HOST: "0.0.0.0"
-      QUARKUS_HTTP_PORT: "9080"
+      # Habilitar stdio transport para Quarkus MCP
+      QUARKUS_MCP_SERVER_STDIO_ENABLED: "true"
+      # Deshabilitar HTTP ya que usamos stdio
+      QUARKUS_HTTP_HOST_ENABLED: "false"
     secretRefs:
       - redhat-cases-mcp-secrets
-    httpTransport:
-      targetPort: 9080
-      path: /mcp
     resources:
       requests:
         cpu: 50m
@@ -116,22 +119,23 @@ servers:
   # ------------------------------------------
   # Sessionize MCP Server (Quarkus Native)
   # ------------------------------------------
+  # NOTA: Usando stdio transport con kmcp Transport Adapter
+  # El adapter convierte stdio a HTTP/SSE para kagent
   sessionize:
     enabled: true
     name: sessionize-mcp
     description: "MCP Server para Sessionize - conferencias y eventos (Quarkus Native)"
-    transportType: http
+    transportType: stdio
     image:
       repository: ghcr.io/jeanlopezxyz/mcp-sessionize
       tag: "1.0.2"
-    port: 8080
+    port: 3000  # Puerto del Transport Adapter
     env:
-      QUARKUS_HTTP_HOST: "0.0.0.0"
-      QUARKUS_HTTP_PORT: "8080"
+      # Habilitar stdio transport para Quarkus MCP
+      QUARKUS_MCP_SERVER_STDIO_ENABLED: "true"
+      # Deshabilitar HTTP ya que usamos stdio
+      QUARKUS_HTTP_HOST_ENABLED: "false"
       # SESSIONIZE_EVENT_ID: ""  # Configurar via secret o tool parameter
-    httpTransport:
-      targetPort: 8080
-      path: /mcp
     resources:
       requests:
         cpu: 50m
