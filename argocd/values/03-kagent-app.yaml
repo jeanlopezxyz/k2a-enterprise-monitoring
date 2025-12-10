@@ -154,17 +154,37 @@ agent:
   systemMessage: |
     You are K2A, an AI agent for Kubernetes enterprise monitoring.
 
-    IMPORTANT - Tool Selection Rules:
-    1. For ALERTS (firing, critical, warning): ONLY use alertmanager_alerts or alertmanager_alert_groups
-    2. For METRICS (CPU, memory, disk, network): ONLY use prometheus_query or prometheus_query_range
-    3. For PROMETHEUS status: use prometheus_health, prometheus_targets, prometheus_rules
-    4. For RED HAT support: use kb_search, case_list, case_create
-    5. For CONFERENCE/EVENTS (speakers, sessions, schedule): use getSessions, getSpeakers, getSchedule
+    Available Tools by Category:
 
-    NEVER use Sessionize tools (getSessions, getSpeakers, getSchedule) for Kubernetes monitoring tasks.
+    ALERTMANAGER (for alerts, silences, notifications):
+    - getAlerts: Get current firing and silenced alerts
+    - getAlertGroups: Get alerts organized by routing groups
+    - getSilences: List active and expired silences
+    - createSilence: Create silence for maintenance
+    - deleteSilence: Remove a silence
+    - getReceivers: List notification receivers
+    - getAlertmanagerStatus: Check AlertManager health
 
-    When asked about alerts, ALWAYS use alertmanager_alerts first.
-    When asked about metrics, ALWAYS use prometheus_query first.
+    PROMETHEUS (for metrics and monitoring):
+    - query: Execute instant PromQL query
+    - queryRange: Execute range query for time series
+    - getRules: Get alerting and recording rules
+    - getTargets: Get scrape target status
+    - getPrometheusStatus: Check Prometheus health
+
+    RED HAT SUPPORT (for KB and cases):
+    - searchKnowledgeBase: Search Red Hat KB articles
+    - getSolution: Get full KB article content
+    - createCase: Create support case
+    - getCase: Get case details
+    - searchCases: List and filter cases
+    - addComment: Add comment to case
+
+    Tool Selection Rules:
+    - For ALERTS: Use getAlerts or getAlertGroups
+    - For METRICS: Use query or queryRange
+    - For RED HAT KB: Use searchKnowledgeBase
+    - For SUPPORT CASES: Use searchCases, createCase, getCase
 
   resources:
     requests:
@@ -182,14 +202,12 @@ mcpServers:
     description: "Prometheus MCP server for querying metrics and alerts"
     url: "http://prometheus-mcp.k2a-mcp-servers.svc.cluster.local:9081/mcp"
     tools:
-      - prometheus_query
-      - prometheus_query_range
-      - prometheus_alerts
-      - prometheus_rules
-      - prometheus_targets
-      - prometheus_metadata
-      - prometheus_health
-      - prometheus_series
+      # Actual tool names from Quarkus MCP server
+      - query
+      - queryRange
+      - getRules
+      - getTargets
+      - getPrometheusStatus
 
   alertmanager:
     enabled: true
@@ -197,15 +215,14 @@ mcpServers:
     description: "AlertManager MCP server for managing alerts and silences"
     url: "http://alertmanager-mcp.k2a-mcp-servers.svc.cluster.local:9082/mcp"
     tools:
-      - alertmanager_alerts
-      - alertmanager_alert_groups
-      - alertmanager_silences
-      - alertmanager_create_silence
-      - alertmanager_delete_silence
-      - alertmanager_silence_alert
-      - alertmanager_receivers
-      - alertmanager_status
-      - alertmanager_health
+      # Actual tool names from Quarkus MCP server
+      - getAlerts
+      - getAlertGroups
+      - getSilences
+      - createSilence
+      - deleteSilence
+      - getReceivers
+      - getAlertmanagerStatus
 
   redhatCases:
     enabled: true
@@ -213,14 +230,19 @@ mcpServers:
     description: "Red Hat Cases MCP server for KB search and case management"
     url: "http://redhat-cases-mcp.k2a-mcp-servers.svc.cluster.local:9080/mcp"
     tools:
-      - kb_search
-      - kb_get_article
-      - case_create
-      - case_get
-      - case_add_comment
-      - case_list
-      - case_escalate
-      - redhat_health
+      # Actual tool names from Quarkus MCP server
+      - searchKnowledgeBase
+      - getSolution
+      - createCase
+      - getCase
+      - addComment
+      - searchCases
+      - updateCase
+      - getAccountInfo
+      - getEntitlements
+      - getStatistics
+      - listProducts
+      - listVersions
 
   sessionize:
     enabled: false  # Temporarily disabled for testing
