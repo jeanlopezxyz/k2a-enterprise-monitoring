@@ -9,6 +9,6 @@ metadata:
 spec:
   provider: {{ .Values.modelConfig.provider }}
   model: {{ .Values.modelConfig.model }}
-  apiKeySecretRef: {{ .Values.modelConfig.secretRef.name }}
+  apiKeySecret: {{ .Values.modelConfig.secretRef.name }}
   apiKeySecretKey: {{ .Values.modelConfig.secretRef.key }}
 {{- end }}
