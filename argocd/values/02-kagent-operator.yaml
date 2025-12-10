@@ -13,7 +13,7 @@
 #
 # =============================================================================
 
-# Registry override
+# Registry override (chart default is cr.kagent.dev)
 registry: "ghcr.io"
 
 # Database
@@ -34,55 +34,89 @@ controller:
 
 # UI
 ui:
-  enabled: true
   replicas: 1
-  service:
-    type: ClusterIP
-    port: 8080
-  resources:
-    requests:
-      cpu: 50m
-      memory: 128Mi
-    limits:
-      cpu: 200m
-      memory: 256Mi
-
-# Tools server
-tools:
-  enabled: true
   resources:
     requests:
       cpu: 100m
-      memory: 128Mi
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  service:
+    type: ClusterIP
+    ports:
+      port: 8080
+      targetPort: 8080
+
+# LLM Providers - usar OpenAI con el secret existente
+providers:
+  default: openAI
+  openAI:
+    provider: OpenAI
+    model: "gpt-4.1-mini"
+    apiKeySecretRef: kagent-openai-secret
+    apiKeySecretKey: api-key
+
+# Disable KMCP subchart (we install kmcp separately)
+kmcp:
+  enabled: false
+
+# Built-in tools server
+kagent-tools:
+  fullnameOverride: kagent-tools
+  enabled: true
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
     limits:
       cpu: 500m
       memory: 512Mi
 
 # Disable pre-configured agents (we use our own k2a-agent)
 agents:
-  k8sAgent:
+  k8s-agent:
     enabled: false
-  helmAgent:
+  kgateway-agent:
     enabled: false
-  istioAgent:
+  istio-agent:
     enabled: false
-  argoAgent:
+  promql-agent:
     enabled: false
-  prometheusAgent:
+  observability-agent:
     enabled: false
-  grafanaAgent:
+  argo-rollouts-agent:
     enabled: false
-  ciliumAgent:
+  helm-agent:
     enabled: false
-  crossplaneAgent:
+  cilium-policy-agent:
     enabled: false
-  awsAgent:
+  cilium-manager-agent:
+    enabled: false
+  cilium-debug-agent:
     enabled: false
 
-# Service Account
-serviceAccount:
-  create: true
+# MCP Tools (grafana-mcp, querydoc)
+tools:
+  grafana-mcp:
+    enabled: false
+  querydoc:
+    enabled: false
 
-# RBAC
-rbac:
-  create: true
+# Disable grafana-mcp since we don't have Grafana
+grafana-mcp:
+  grafana:
+    url: "grafana.kagent:3000/api"
+    apiKey: "-"
+
+# Disable querydoc
+querydoc:
+  replicas: 0
+
+# Observability disabled
+otel:
+  tracing:
+    enabled: false
+  logging:
+    enabled: false
