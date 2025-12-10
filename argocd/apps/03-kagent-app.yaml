@@ -55,9 +55,8 @@ spec:
 
   destination:
     server: https://kubernetes.default.svc
-    # Nota: Cada chart define su propio namespace en values
-    # - kmcp-servers → k2a-mcp-servers
-    # - kagent-app → kagent
+    # Namespace principal para ArgoCD (cada chart define su propio namespace en templates)
+    namespace: k2a-mcp-servers
 
   syncPolicy:
     automated:
