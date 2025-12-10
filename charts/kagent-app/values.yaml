@@ -1,29 +1,56 @@
-# Default values for k2a-agent chart
-# These are generic defaults - override in argocd/values/ for specific environments
+# =============================================================================
+# K2A Agent Chart - Default Values
+# =============================================================================
+#
+# Este chart despliega el Agent de K2A con referencias a MCPServer (kmcp).
+# Los valores por defecto son genéricos - sobreescribir en argocd/values/
+#
+# ARQUITECTURA:
+#   - Namespace 'k2a': Agent + MCP Servers (unificado)
+#   - Namespace 'kagent': Solo operador kagent (controller, ui, tools)
+#
+# PREREQUISITO: Crear el secret de OpenAI antes de desplegar
+#   kubectl create namespace k2a
+#   kubectl create secret generic kagent-openai \
+#     --namespace k2a \
+#     --from-literal=OPENAI_API_KEY="sk-..."
+#
+# =============================================================================
 
+# Namespace unificado para Agent y MCP Servers
 global:
-  namespace: kagent
-  mcpServersNamespace: k2a-mcp-servers
+  namespace: k2a
 
-# ModelConfig - Configuracion del modelo LLM
-# IMPORTANTE: El secret debe crearse ANTES de desplegar el chart
-# kubectl create secret generic kagent-openai-secret --namespace kagent --from-literal=api-key="sk-..."
+# =============================================================================
+# ModelConfig - Configuración del modelo LLM
+# =============================================================================
 modelConfig:
   create: true
   name: default-model-config
-  provider: openai        # openai, anthropic, azure-openai, etc.
-  model: gpt-4o           # Modelo a usar
+  provider: OpenAI
+  model: gpt-4o-mini
   secretRef:
-    name: kagent-openai-secret   # Nombre del secret existente
-    key: api-key                 # Key dentro del secret
+    name: kagent-openai
+    key: OPENAI_API_KEY
   # temperature: 0.7
   # maxTokens: 4096
 
-# Agent configuration defaults
+# =============================================================================
+# Agent Configuration
+# =============================================================================
 agent:
   name: k2a-enterprise-monitoring
-  modelConfig: default-model-config  # Debe coincidir con modelConfig.name
-  systemMessage: ""
+  namespace: k2a
+  modelConfig: default-model-config
+  # System message - override in environment values
+  systemMessage: |
+    You are K2A, an AI agent for Kubernetes enterprise monitoring.
+  # ConfigMap for system message (scalable option)
+  systemMessageConfigMap:
+    enabled: false
+    create: false
+    name: k2a-system-prompt
+    key: system-prompt
   resources:
     requests:
       cpu: 100m
@@ -32,22 +59,60 @@ agent:
       cpu: 1000m
       memory: 1Gi
 
-# RemoteMCPServer definitions - override in environment values
+# =============================================================================
+# MCPServer References (kmcp)
+# =============================================================================
+# El Agent referencia MCPServer CRDs en el mismo namespace.
+# Estos deben coincidir con los nombres de los MCPServers desplegados por kmcp-servers.
+#
+# Ejemplo:
+#   mcpServers:
+#     prometheus:
+#       enabled: true
+#       name: prometheus-mcp
+#       tools:
+#         - query
+#         - queryRange
+#
 mcpServers: {}
 
-# A2A Skills - override in environment values
+# =============================================================================
+# A2A Skills
+# =============================================================================
+# Skills expuestas por el agente via protocolo A2A.
+#
+# Ejemplo:
+#   a2aSkills:
+#     - id: alert-monitoring
+#       name: Alert Monitoring
+#       description: Monitor alerts
+#       examples:
+#         - What alerts are firing?
+#       tags:
+#         - alerts
+#       inputModes:
+#         - text
+#       outputModes:
+#         - text
+#
 a2aSkills: []
 
+# =============================================================================
 # Labels
+# =============================================================================
 labels:
   app.kubernetes.io/part-of: k2a-enterprise-monitoring
   app.kubernetes.io/managed-by: argocd
 
+# =============================================================================
 # Network Policy
+# =============================================================================
 networkPolicy:
   enabled: false
 
+# =============================================================================
 # Monitoring
+# =============================================================================
 monitoring:
   serviceMonitor:
     enabled: false
@@ -57,7 +122,9 @@ monitoring:
   prometheusRule:
     enabled: false
 
+# =============================================================================
 # Autoscaling (HPA)
+# =============================================================================
 autoscaling:
   enabled: false
   minReplicas: 1
@@ -65,7 +132,9 @@ autoscaling:
   targetCPUUtilizationPercentage: 80
   targetMemoryUtilizationPercentage: 80
 
+# =============================================================================
 # Pod Disruption Budget
+# =============================================================================
 podDisruptionBudget:
   enabled: false
   minAvailable: 1
