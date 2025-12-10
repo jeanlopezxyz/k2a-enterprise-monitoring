@@ -9,13 +9,6 @@ metadata:
 spec:
   provider: {{ .Values.modelConfig.provider }}
   model: {{ .Values.modelConfig.model }}
-  apiKeySecretRef:
-    name: {{ .Values.modelConfig.secretRef.name }}
-    key: {{ .Values.modelConfig.secretRef.key }}
-  {{- if .Values.modelConfig.temperature }}
-  temperature: {{ .Values.modelConfig.temperature }}
-  {{- end }}
-  {{- if .Values.modelConfig.maxTokens }}
-  maxTokens: {{ .Values.modelConfig.maxTokens }}
-  {{- end }}
+  apiKeySecretRef: {{ .Values.modelConfig.secretRef.name }}
+  apiKeySecretKey: {{ .Values.modelConfig.secretRef.key }}
 {{- end }}
