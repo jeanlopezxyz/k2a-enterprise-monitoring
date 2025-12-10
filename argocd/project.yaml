@@ -90,6 +90,9 @@ spec:
     # Core resources
     - group: ''
       kind: '*'
+    # RBAC (Role, RoleBinding)
+    - group: rbac.authorization.k8s.io
+      kind: '*'
     # Apps (Deployments, StatefulSets, etc.)
     - group: apps
       kind: '*'
