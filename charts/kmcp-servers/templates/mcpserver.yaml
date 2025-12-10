@@ -123,7 +123,13 @@ spec:
   {{- if eq ($server.transportType | default "stdio") "stdio" }}
   # Stdio Transport: kmcp despliega Transport Adapter automaticamente
   # El adapter convierte stdio a HTTP/SSE en puerto 3000
-  stdioTransport: {}
+  stdioTransport:
+    # Comando para ejecutar el MCP server (Quarkus Native default: /work/application)
+    cmd: {{ $server.stdioCmd | default "/work/application" }}
+    {{- if $server.stdioArgs }}
+    args:
+      {{- toYaml $server.stdioArgs | nindent 6 }}
+    {{- end }}
   {{- end }}
 
   {{- if eq $server.transportType "http" }}
