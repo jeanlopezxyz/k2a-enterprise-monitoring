@@ -78,6 +78,11 @@ spec:
   # NAMESPACE RESOURCE WHITELIST
   # ============================================
   namespaceResourceWhitelist:
+    # ArgoCD Applications (para App-of-Apps pattern)
+    - group: argoproj.io
+      kind: Application
+    - group: argoproj.io
+      kind: AppProject
     # Core resources
     - group: ''
       kind: '*'
