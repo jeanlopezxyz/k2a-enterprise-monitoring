@@ -30,8 +30,9 @@ spec:
     # Git repository (HTTPS y SSH)
     - 'https://github.com/jeanlopezxyz/k2a-enterprise-monitoring.git'
     - 'git@github.com:jeanlopezxyz/k2a-enterprise-monitoring.git'
-    # Helm chart repository (kagent + kmcp)
-    - 'https://charts.kagent.dev'
+    # Helm OCI registry (kagent + kmcp)
+    - 'ghcr.io/kagent-dev/kagent/helm'
+    - 'ghcr.io/kagent-dev/kagent/helm/*'
 
   # ============================================
   # DESTINATION NAMESPACES

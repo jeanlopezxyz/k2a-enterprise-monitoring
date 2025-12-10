@@ -40,8 +40,8 @@ spec:
   project: k2a-enterprise-monitoring
 
   sources:
-    # 1. CRDs de kagent (Helm repository)
-    - repoURL: https://charts.kagent.dev
+    # 1. CRDs de kagent (OCI registry)
+    - repoURL: ghcr.io/kagent-dev/kagent/helm
       chart: kagent-crds
       targetRevision: 0.7.6
 
@@ -51,7 +51,7 @@ spec:
       ref: values
 
     # 3. kagent Helm chart (Controller, UI, Tools)
-    - repoURL: https://charts.kagent.dev
+    - repoURL: ghcr.io/kagent-dev/kagent/helm
       chart: kagent
       targetRevision: 0.7.6
       helm:

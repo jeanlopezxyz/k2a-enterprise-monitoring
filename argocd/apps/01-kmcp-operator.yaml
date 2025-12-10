@@ -37,7 +37,7 @@ spec:
   # Multiples fuentes: CRDs + Controller (Helm repository)
   sources:
     # 1. CRDs (se aplican primero por ServerSideApply)
-    - repoURL: https://charts.kagent.dev
+    - repoURL: ghcr.io/kagent-dev/kagent/helm
       chart: kmcp-crds
       targetRevision: 0.2.2
 
@@ -47,7 +47,7 @@ spec:
       ref: values
 
     # 3. Controller
-    - repoURL: https://charts.kagent.dev
+    - repoURL: ghcr.io/kagent-dev/kagent/helm
       chart: kmcp
       targetRevision: 0.2.2
       helm:
