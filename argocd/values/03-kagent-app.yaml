@@ -39,6 +39,8 @@ servers:
       PROMETHEUS_URL: "https://thanos-querier.openshift-monitoring.svc.cluster.local:9091"
       QUARKUS_HTTP_HOST: "0.0.0.0"
       QUARKUS_HTTP_PORT: "9081"
+      # Trust OpenShift internal SSL certificates
+      QUARKUS_TLS_TRUST_ALL: "true"
     httpTransport:
       targetPort: 9081
       path: /mcp
@@ -66,6 +68,8 @@ servers:
       ALERTMANAGER_URL: "https://alertmanager-main.openshift-monitoring.svc.cluster.local:9094"
       QUARKUS_HTTP_HOST: "0.0.0.0"
       QUARKUS_HTTP_PORT: "9082"
+      # Trust OpenShift internal SSL certificates
+      QUARKUS_TLS_TRUST_ALL: "true"
     httpTransport:
       targetPort: 9082
       path: /mcp
@@ -152,6 +156,12 @@ agent:
   name: k2a-enterprise-monitoring
   namespace: kagent
   modelConfig: k2a-model-config
+  # Use ConfigMap for systemMessage (scalable option)
+  systemMessageConfigMap:
+    enabled: true
+    create: true
+    name: k2a-system-prompt
+    key: system-prompt
   systemMessage: |
     You are K2A, an AI agent for Kubernetes enterprise monitoring.
 

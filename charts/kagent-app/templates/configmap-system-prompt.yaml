@@ -1,0 +1,14 @@
+{{- if .Values.agent.systemMessageConfigMap }}
+{{- if .Values.agent.systemMessageConfigMap.create }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.agent.systemMessageConfigMap.name | default "k2a-system-prompt" }}
+  namespace: {{ .Values.agent.namespace | default .Values.global.namespace }}
+  labels:
+    {{- include "k2a-agent.labels" . | nindent 4 }}
+data:
+  system-prompt: |
+    {{- .Values.agent.systemMessage | nindent 4 }}
+{{- end }}
+{{- end }}

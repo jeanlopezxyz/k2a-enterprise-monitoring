@@ -8,8 +8,20 @@ metadata:
 spec:
   declarative:
     modelConfig: {{ .Values.agent.modelConfig }}
+    {{- if .Values.agent.systemMessageConfigMap }}
+    {{- if .Values.agent.systemMessageConfigMap.enabled }}
+    systemMessageFrom:
+      type: ConfigMap
+      name: {{ .Values.agent.systemMessageConfigMap.name | default "k2a-system-prompt" }}
+      key: {{ .Values.agent.systemMessageConfigMap.key | default "system-prompt" }}
+    {{- else }}
     systemMessage: |
       {{- .Values.agent.systemMessage | nindent 6 }}
+    {{- end }}
+    {{- else }}
+    systemMessage: |
+      {{- .Values.agent.systemMessage | nindent 6 }}
+    {{- end }}
     tools:
     {{- range $key, $server := .Values.mcpServers }}
     {{- if $server.enabled }}
