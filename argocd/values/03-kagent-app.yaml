@@ -137,11 +137,12 @@ servers:
 # =============================================================================
 
 # ModelConfig - Configuracion del modelo LLM
+# gpt-4o-mini: 15x más económico que gpt-4o, rápido, 128K contexto
 modelConfig:
   create: true
   name: k2a-model-config
   provider: OpenAI
-  model: gpt-4o
+  model: gpt-4o-mini
   secretRef:
     name: kagent-openai
     key: OPENAI_API_KEY
