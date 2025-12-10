@@ -2,8 +2,8 @@
 # kagent Helm Values - v0.7.6
 # =============================================================================
 #
-# Configuracion de produccion para kagent operator
-# Documentacion: https://kagent.dev/docs
+# Minimal configuration for kagent operator
+# Uses chart defaults where possible
 #
 # PREREQUISITO: Crear el secret de OpenAI antes de desplegar
 #   kubectl create namespace kagent
@@ -13,75 +13,32 @@
 #
 # =============================================================================
 
-# ============================================
-# GLOBAL
-# ============================================
-global:
-  registry: ghcr.io/kagent-dev/kagent
-  imagePullPolicy: IfNotPresent
+# Registry override
+registry: "ghcr.io"
 
-# ============================================
-# DATABASE
-# ============================================
+# Database
 database:
-  type: sqlite  # sqlite o postgresql
-  # Para PostgreSQL:
-  # type: postgresql
-  # postgresql:
-  #   host: postgres.kagent.svc.cluster.local
-  #   port: 5432
-  #   database: kagent
-  #   secretName: kagent-postgres-secret
+  type: sqlite
 
-# ============================================
-# CONTROLLER
-# ============================================
+# Controller
 controller:
-  replicaCount: 1
-
-  logging:
-    level: info
-    format: json
-
-  # A2A (Agent-to-Agent) communication
-  a2a:
-    enabled: true
-
-  # Watch all namespaces or specific ones
-  namespaceScope: ""  # Empty = all namespaces
-
+  replicas: 1
+  loglevel: "info"
   resources:
     requests:
       cpu: 100m
-      memory: 256Mi
+      memory: 128Mi
     limits:
       cpu: 500m
       memory: 512Mi
 
-  # Security context (OpenShift compatible)
-  podSecurityContext:
-    runAsNonRoot: true
-    seccompProfile:
-      type: RuntimeDefault
-
-  securityContext:
-    allowPrivilegeEscalation: false
-    capabilities:
-      drop:
-        - ALL
-    readOnlyRootFilesystem: true
-
-# ============================================
 # UI
-# ============================================
 ui:
   enabled: true
-  replicaCount: 1
-
+  replicas: 1
   service:
     type: ClusterIP
     port: 8080
-
   resources:
     requests:
       cpu: 50m
@@ -90,63 +47,9 @@ ui:
       cpu: 200m
       memory: 256Mi
 
-  podSecurityContext:
-    runAsNonRoot: true
-
-  securityContext:
-    allowPrivilegeEscalation: false
-    capabilities:
-      drop:
-        - ALL
-
-# ============================================
-# LLM PROVIDERS
-# ============================================
-providers:
-  # Default provider
-  default: openAI
-
-  # OpenAI Configuration
-  openAI:
-    enabled: true
-    # El API key se obtiene del secret
-    apiKeySecret: kagent-openai-secret
-    apiKeySecretKey: api-key
-    model: gpt-4o
-    # Parametros opcionales
-    # temperature: "0.7"
-    # maxTokens: 4096
-
-  # Anthropic Configuration (opcional)
-  anthropic:
-    enabled: false
-    # apiKeySecret: kagent-anthropic-secret
-    # apiKeySecretKey: api-key
-    # model: claude-3-5-sonnet-20241022
-
-  # Ollama Configuration (opcional - para modelos locales)
-  ollama:
-    enabled: false
-    # endpoint: http://ollama.kagent.svc.cluster.local:11434
-    # model: llama3
-
-# ============================================
-# KMCP (MCP Protocol Support)
-# ============================================
-kmcp:
-  enabled: true  # Habilita soporte MCP
-  version: "0.2.2"
-
-# ============================================
-# BUILT-IN TOOLS
-# ============================================
+# Tools server
 tools:
   enabled: true
-
-  # Kubernetes tools
-  kubernetes:
-    enabled: true
-
   resources:
     requests:
       cpu: 100m
@@ -155,10 +58,7 @@ tools:
       cpu: 500m
       memory: 512Mi
 
-# ============================================
-# PRE-CONFIGURED AGENTS (Deshabilitados)
-# ============================================
-# Usamos nuestro propio k2a-agent en lugar de los agentes predefinidos
+# Disable pre-configured agents (we use our own k2a-agent)
 agents:
   k8sAgent:
     enabled: false
@@ -179,53 +79,10 @@ agents:
   awsAgent:
     enabled: false
 
-# ============================================
-# MCP TOOLS (Opcional)
-# ============================================
-mcpTools:
-  grafana:
-    enabled: false
-  queryDoc:
-    enabled: false
-
-# ============================================
-# OBSERVABILITY
-# ============================================
-observability:
-  tracing:
-    enabled: false
-    # otlp:
-    #   endpoint: http://otel-collector.observability:4317
-  logging:
-    level: info
-    format: json
-
-# ============================================
-# SERVICE ACCOUNT & RBAC
-# ============================================
+# Service Account
 serviceAccount:
   create: true
-  annotations: {}
 
+# RBAC
 rbac:
   create: true
-
-# ============================================
-# SCHEDULING
-# ============================================
-nodeSelector: {}
-tolerations: []
-affinity: {}
-
-# ============================================
-# POD ANNOTATIONS
-# ============================================
-podAnnotations:
-  prometheus.io/scrape: "true"
-  prometheus.io/port: "8443"
-  prometheus.io/scheme: "https"
-
-# ============================================
-# IMAGE PULL SECRETS
-# ============================================
-imagePullSecrets: []
