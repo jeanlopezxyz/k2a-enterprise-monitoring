@@ -143,8 +143,8 @@ modelConfig:
   provider: OpenAI
   model: gpt-4o
   secretRef:
-    name: kagent-openai-secret
-    key: api-key
+    name: kagent-openai
+    key: OPENAI_API_KEY
 
 # Agent configuration
 agent:
