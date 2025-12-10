@@ -50,8 +50,8 @@ spec:
     # kagent operator
     - namespace: kagent
       server: https://kubernetes.default.svc
-    # KMCP Servers (MCP servers)
-    - namespace: k2a-mcp-servers
+    # K2A Application (Agent + MCP Servers unified)
+    - namespace: k2a
       server: https://kubernetes.default.svc
 
   # ============================================
