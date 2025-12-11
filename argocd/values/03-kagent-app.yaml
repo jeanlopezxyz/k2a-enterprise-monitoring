@@ -365,7 +365,7 @@ mcpServers:
       - getAlertmanagerStatus
 
   redhatCases:
-    enabled: true  # Enabled - secret redhat-cases-mcp-secrets configured
+    enabled: false  # Temporarily disabled - investigating 404 error from kagent client
     name: redhat-cases-mcp  # Debe coincidir con servers.redhatCases.name
     tools:
       - searchKnowledgeBase
