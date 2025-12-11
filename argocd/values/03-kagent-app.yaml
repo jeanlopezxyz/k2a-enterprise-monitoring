@@ -62,7 +62,7 @@ servers:
     port: 9081  # Puerto HTTP nativo de Quarkus
     httpTransport:
       targetPort: 9081
-      path: /mcp/sse  # Legacy SSE endpoint for 2024-11-05 protocol
+      path: /mcp  # Streamable HTTP endpoint
     env:
       PROMETHEUS_URL: "https://thanos-querier.openshift-monitoring.svc.cluster.local:9091"
       # HTTP mode - stdio disabled
@@ -97,7 +97,7 @@ servers:
     port: 9082  # Puerto HTTP nativo de Quarkus
     httpTransport:
       targetPort: 9082
-      path: /mcp/sse  # Legacy SSE endpoint for 2024-11-05 protocol
+      path: /mcp  # Streamable HTTP endpoint
     env:
       ALERTMANAGER_URL: "https://alertmanager-main.openshift-monitoring.svc.cluster.local:9094"
       # HTTP mode - stdio disabled
@@ -132,7 +132,7 @@ servers:
     port: 9083  # Puerto HTTP nativo de Quarkus
     httpTransport:
       targetPort: 9083
-      path: /mcp/sse  # Legacy SSE endpoint for 2024-11-05 protocol
+      path: /mcp  # Streamable HTTP endpoint
     env:
       # HTTP mode - stdio disabled
       QUARKUS_MCP_SERVER_STDIO_ENABLED: "false"
@@ -166,7 +166,7 @@ servers:
     port: 9084  # Puerto HTTP nativo de Quarkus
     httpTransport:
       targetPort: 9084
-      path: /mcp/sse  # Legacy SSE endpoint for 2024-11-05 protocol
+      path: /mcp  # Streamable HTTP endpoint
     env:
       # HTTP mode - stdio disabled
       QUARKUS_MCP_SERVER_STDIO_ENABLED: "false"
