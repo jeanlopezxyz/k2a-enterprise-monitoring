@@ -128,7 +128,7 @@ servers:
     transportType: http
     image:
       repository: ghcr.io/jeanlopezxyz/mcp-redhat-cases
-      tag: "1.0.4"
+      tag: "latest"
     port: 9083  # Puerto HTTP nativo de Quarkus
     httpTransport:
       targetPort: 9083
@@ -365,7 +365,7 @@ mcpServers:
       - getAlertmanagerStatus
 
   redhatCases:
-    enabled: false  # Temporarily disabled - investigating 404 error from kagent client
+    enabled: true  # Re-enabled with latest image
     name: redhat-cases-mcp  # Debe coincidir con servers.redhatCases.name
     tools:
       - searchKnowledgeBase
