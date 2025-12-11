@@ -11,4 +11,30 @@ spec:
   model: {{ .Values.modelConfig.model }}
   apiKeySecret: {{ .Values.modelConfig.secretRef.name }}
   apiKeySecretKey: {{ .Values.modelConfig.secretRef.key }}
+  {{- if .Values.modelConfig.openAI }}
+  openAI:
+    {{- toYaml .Values.modelConfig.openAI | nindent 4 }}
+  {{- end }}
+{{- end }}
+{{- /* Additional Model Configs */}}
+{{- range $key, $config := .Values.additionalModelConfigs }}
+{{- if $config.create }}
+---
+apiVersion: kagent.dev/v1alpha2
+kind: ModelConfig
+metadata:
+  name: {{ $config.name }}
+  namespace: {{ $.Values.agent.namespace | default $.Values.global.namespace }}
+  labels:
+    {{- include "k2a-agent.labels" $ | nindent 4 }}
+spec:
+  provider: {{ $config.provider }}
+  model: {{ $config.model }}
+  apiKeySecret: {{ $config.secretRef.name }}
+  apiKeySecretKey: {{ $config.secretRef.key }}
+  {{- if $config.openAI }}
+  openAI:
+    {{- toYaml $config.openAI | nindent 4 }}
+  {{- end }}
+{{- end }}
 {{- end }}

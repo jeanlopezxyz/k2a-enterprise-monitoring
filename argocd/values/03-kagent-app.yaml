@@ -232,22 +232,40 @@ servers:
 # SECCION 2: K2A AGENT (chart: kagent-app)
 # =============================================================================
 
-# ModelConfig - Configuracion del modelo LLM
+# ModelConfig - Configuracion del modelo LLM principal
 # gpt-4o-mini: 15x más económico que gpt-4o, rápido, 128K contexto
 modelConfig:
   create: true
-  name: k2a-model-config
+  name: k2a-openai-config
   provider: OpenAI
   model: gpt-4o-mini
   secretRef:
     name: kagent-openai
     key: OPENAI_API_KEY
 
+# Modelos adicionales
+additionalModelConfigs:
+  # DeepSeek - Modelo económico y potente
+  # deepseek-chat: Modelo general (DeepSeek-V3.2)
+  # deepseek-reasoner: Razonamiento avanzado con chain-of-thought
+  deepseek:
+    create: true
+    name: k2a-deepseek-config
+    provider: OpenAI  # DeepSeek usa API compatible con OpenAI
+    model: deepseek-chat
+    secretRef:
+      name: kagent-deepseek
+      key: DEEPSEEK_API_KEY
+    openAI:
+      baseUrl: "https://api.deepseek.com"
+      temperature: "0.7"
+      maxTokens: 4096
+
 # Agent configuration
 agent:
   name: k2a-enterprise-monitoring
   namespace: k2a  # Mismo namespace que MCP servers para usar MCPServer (kmcp)
-  modelConfig: k2a-model-config
+  modelConfig: k2a-openai-config  # Opciones: k2a-openai-config, k2a-deepseek-config
   # Use ConfigMap for systemMessage (scalable option)
   systemMessageConfigMap:
     enabled: true
