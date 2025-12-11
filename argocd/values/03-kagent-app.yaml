@@ -26,6 +26,25 @@
 global:
   namespace: k2a
 
+# =============================================================================
+# RBAC Configuration for OpenShift Monitoring Access
+# =============================================================================
+# The built-in cluster-monitoring-view ClusterRole doesn't include alertmanagers/api
+# We create a custom ClusterRole with proper permissions for both Prometheus and AlertManager
+rbac:
+  create: true
+  serviceAccount:
+    name: kmcp-servers
+    annotations: {}
+  # Custom ClusterRole for OpenShift Monitoring API access
+  # Creates: ClusterRole k2a-monitoring-api-access + ClusterRoleBinding
+  monitoringApiAccess:
+    create: true
+  # Optional: Additional binding to cluster-monitoring-view (disabled by default)
+  clusterRoleBinding:
+    create: false
+    clusterRole: cluster-monitoring-view
+
 servers:
   # ------------------------------------------
   # Prometheus MCP Server (Quarkus Native)

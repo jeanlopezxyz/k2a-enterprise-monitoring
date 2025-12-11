@@ -11,11 +11,81 @@ metadata:
   annotations:
     {{- toYaml . | nindent 4 }}
   {{- end }}
+{{- if .Values.rbac.monitoringApiAccess.create }}
+---
+# =============================================================================
+# ClusterRole for OpenShift Monitoring API Access
+# =============================================================================
+# The built-in cluster-monitoring-view only has prometheuses/api permissions.
+# We need alertmanagers/api for AlertManager MCP to work.
+# This ClusterRole provides access to both Prometheus and AlertManager APIs.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Values.global.namespace }}-monitoring-api-access
+  labels:
+    {{- include "kmcp-servers.labels" . | nindent 4 }}
+rules:
+  # AlertManager API access (required for alertmanager-mcp)
+  - apiGroups:
+      - monitoring.coreos.com
+    resources:
+      - alertmanagers/api
+    verbs:
+      - get
+      - create
+      - update
+  # Prometheus API access (required for prometheus-mcp)
+  - apiGroups:
+      - monitoring.coreos.com
+    resources:
+      - prometheuses/api
+    verbs:
+      - get
+      - create
+      - update
+  # Namespace access (required for monitoring queries)
+  - apiGroups:
+      - ""
+    resources:
+      - namespaces
+    verbs:
+      - get
+---
+# ClusterRoleBinding for monitoring API access
+# Binds the custom ClusterRole to MCP server ServiceAccounts
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ .Values.global.namespace }}-monitoring-api-access
+  labels:
+    {{- include "kmcp-servers.labels" . | nindent 4 }}
+subjects:
+  # Base ServiceAccount
+  - kind: ServiceAccount
+    name: {{ .Values.rbac.serviceAccount.name }}
+    namespace: {{ .Values.global.namespace }}
+  # Prometheus MCP ServiceAccount (created by kmcp controller)
+  {{- if .Values.servers.prometheus.enabled }}
+  - kind: ServiceAccount
+    name: {{ .Values.servers.prometheus.name }}
+    namespace: {{ .Values.global.namespace }}
+  {{- end }}
+  # AlertManager MCP ServiceAccount (created by kmcp controller)
+  {{- if .Values.servers.alertmanager.enabled }}
+  - kind: ServiceAccount
+    name: {{ .Values.servers.alertmanager.name }}
+    namespace: {{ .Values.global.namespace }}
+  {{- end }}
+roleRef:
+  kind: ClusterRole
+  name: {{ .Values.global.namespace }}-monitoring-api-access
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}
 {{- if .Values.rbac.clusterRoleBinding.create }}
 ---
-# ClusterRoleBinding for monitoring access
-# kmcp controller creates individual ServiceAccounts for each MCPServer
-# We need to bind cluster-monitoring-view to all MCP servers that access Prometheus/AlertManager
+# ClusterRoleBinding for additional monitoring view access (optional)
+# Binds cluster-monitoring-view for general monitoring read access
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:

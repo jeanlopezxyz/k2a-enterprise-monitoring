@@ -47,8 +47,14 @@ rbac:
   serviceAccount:
     name: kmcp-servers
     annotations: {}
-  clusterRoleBinding:
+  # Custom ClusterRole for OpenShift Monitoring API access
+  # Required for AlertManager and Prometheus MCP servers
+  # The built-in cluster-monitoring-view doesn't include alertmanagers/api
+  monitoringApiAccess:
     create: true
+  # Optional: Additional ClusterRoleBinding for cluster-monitoring-view
+  clusterRoleBinding:
+    create: false  # Disabled - monitoringApiAccess provides all needed permissions
     clusterRole: cluster-monitoring-view
 
 # ============================================
