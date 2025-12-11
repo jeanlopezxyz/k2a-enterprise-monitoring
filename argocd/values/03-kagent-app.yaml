@@ -52,6 +52,8 @@ servers:
       QUARKUS_HTTP_HOST: "0.0.0.0"
       # Trust OpenShift internal SSL certificates
       QUARKUS_TLS_TRUST_ALL: "true"
+      # Session timeout (5 minutes) to prevent premature session termination
+      QUARKUS_MCP_SERVER_HTTP_SESSION_TIMEOUT: "300"
     resources:
       requests:
         cpu: 50m
@@ -85,6 +87,8 @@ servers:
       QUARKUS_HTTP_HOST: "0.0.0.0"
       # Trust OpenShift internal SSL certificates
       QUARKUS_TLS_TRUST_ALL: "true"
+      # Session timeout (5 minutes) to prevent premature session termination
+      QUARKUS_MCP_SERVER_HTTP_SESSION_TIMEOUT: "300"
     resources:
       requests:
         cpu: 50m
@@ -115,6 +119,8 @@ servers:
       QUARKUS_MCP_SERVER_STDIO_ENABLED: "false"
       QUARKUS_HTTP_PORT: "9083"
       QUARKUS_HTTP_HOST: "0.0.0.0"
+      # Session timeout (5 minutes) to prevent premature session termination
+      QUARKUS_MCP_SERVER_HTTP_SESSION_TIMEOUT: "300"
     secretRefs:
       - redhat-cases-mcp-secrets
     resources:
@@ -147,6 +153,8 @@ servers:
       QUARKUS_MCP_SERVER_STDIO_ENABLED: "false"
       QUARKUS_HTTP_PORT: "9084"
       QUARKUS_HTTP_HOST: "0.0.0.0"
+      # Session timeout (5 minutes) to prevent premature session termination
+      QUARKUS_MCP_SERVER_HTTP_SESSION_TIMEOUT: "300"
       # SESSIONIZE_EVENT_ID: ""  # Configurar via secret o tool parameter
     resources:
       requests:
@@ -320,7 +328,7 @@ mcpServers:
       - getAlertmanagerStatus
 
   redhatCases:
-    enabled: false  # Temporarily disabled - missing secret redhat-cases-mcp-secrets
+    enabled: true  # Enabled - secret redhat-cases-mcp-secrets configured
     name: redhat-cases-mcp  # Debe coincidir con servers.redhatCases.name
     tools:
       - searchKnowledgeBase
