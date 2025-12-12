@@ -51,6 +51,10 @@ agent:
     create: false
     name: k2a-system-prompt
     key: system-prompt
+  # Memory for RAG (Pinecone)
+  memory:
+    enabled: false
+    name: k2a-memory
   resources:
     requests:
       cpu: 100m

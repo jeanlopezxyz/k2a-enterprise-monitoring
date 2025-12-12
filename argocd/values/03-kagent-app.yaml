@@ -266,6 +266,10 @@ agent:
   name: k2a-enterprise-monitoring
   namespace: k2a  # Mismo namespace que MCP servers para usar MCPServer (kmcp)
   modelConfig: k2a-openai-config  # Opciones: k2a-openai-config, k2a-deepseek-config
+  # Memory for RAG with Pinecone (reduces token usage)
+  memory:
+    enabled: true
+    name: k2a-memory
   # Use ConfigMap for systemMessage (scalable option)
   systemMessageConfigMap:
     enabled: true
