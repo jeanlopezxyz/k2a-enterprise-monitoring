@@ -154,7 +154,7 @@ tracing:
   name: jaeger
   namespace: kagent
   strategy: allInOne
-  image: registry.redhat.io/rhosdt/jaeger-all-in-one-rhel8:1.65.0
+  # image: omitido - usar imagen por defecto del operador
   logLevel: info
   storage:
     type: memory

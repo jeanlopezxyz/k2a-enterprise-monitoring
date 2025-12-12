@@ -13,7 +13,9 @@ spec:
   strategy: {{ .Values.tracing.strategy | default "allInOne" }}
   {{- if eq .Values.tracing.strategy "allInOne" }}
   allInOne:
-    image: {{ .Values.tracing.image | default "registry.redhat.io/rhosdt/jaeger-all-in-one-rhel8:1.65.0" }}
+    {{- if .Values.tracing.image }}
+    image: {{ .Values.tracing.image }}
+    {{- end }}
     options:
       log-level: {{ .Values.tracing.logLevel | default "info" }}
       collector:
