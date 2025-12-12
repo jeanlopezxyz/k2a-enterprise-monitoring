@@ -126,6 +126,9 @@ spec:
     # Certificates
     - group: cert-manager.io
       kind: '*'
+    # Jaeger/Distributed Tracing
+    - group: jaegertracing.io
+      kind: '*'
 
   # ============================================
   # ORPHANED RESOURCES
