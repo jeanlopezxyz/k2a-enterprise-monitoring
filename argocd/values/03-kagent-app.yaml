@@ -460,12 +460,12 @@ podDisruptionBudget:
 # Despliega instancia de Jaeger usando el operador Red Hat OpenShift distributed tracing
 # El operador ya esta instalado (jaeger-operator.v1.65.0-1)
 #
-# Endpoint para kagent: http://jaeger-collector.kagent.svc.cluster.local:4317
+# Endpoint para kagent: http://jaeger-collector.k2a.svc.cluster.local:4317
 #
 tracing:
   enabled: true
   name: jaeger
-  namespace: kagent  # Mismo namespace que kagent operator
+  namespace: k2a  # Mismo namespace que la app ArgoCD
   strategy: allInOne
   image: registry.redhat.io/rhosdt/jaeger-all-in-one-rhel8:1.65.0
   logLevel: info

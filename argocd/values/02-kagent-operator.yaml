@@ -137,7 +137,7 @@ otel:
     exporter:
       otlp:
         # Jaeger collector endpoint (OTLP gRPC)
-        # Cambiar si Jaeger esta en otro namespace
-        endpoint: http://jaeger-collector.kagent.svc.cluster.local:4317
+        # Jaeger desplegado en namespace k2a
+        endpoint: http://jaeger-collector.k2a.svc.cluster.local:4317
   logging:
     enabled: false
