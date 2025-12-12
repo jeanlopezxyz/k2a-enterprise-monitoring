@@ -1,4 +1,4 @@
-apiVersion: kagent.dev/v1alpha1
+apiVersion: kagent.dev/v1alpha2
 kind: Agent
 metadata:
   name: {{ .Values.agent.name }}
@@ -6,70 +6,69 @@ metadata:
   labels:
     {{- include "k2a-agent.labels" . | nindent 4 }}
 spec:
-  modelConfig: {{ .Values.agent.modelConfig }}
-  {{- if .Values.agent.systemMessageConfigMap }}
-  {{- if .Values.agent.systemMessageConfigMap.enabled }}
-  systemMessage: ""
-  {{- else }}
-  systemMessage: |
-    {{- .Values.agent.systemMessage | nindent 4 }}
-  {{- end }}
-  {{- else }}
-  systemMessage: |
-    {{- .Values.agent.systemMessage | nindent 4 }}
-  {{- end }}
-  {{- if .Values.agent.memory }}
-  {{- if .Values.agent.memory.enabled }}
-  memory: {{ .Values.agent.memory.name }}
-  {{- end }}
-  {{- end }}
-  tools:
-  {{- range $key, $server := .Values.mcpServers }}
-  {{- if $server.enabled }}
-  - type: McpServer
-    mcpServer:
-      toolServer: {{ $server.name }}
-      {{- if $server.tools }}
-      toolNames:
-      {{- range $server.tools }}
-      - {{ . }}
-      {{- end }}
-      {{- end }}
-  {{- end }}
-  {{- end }}
-  {{- if .Values.a2aSkills }}
-  a2aConfig:
-    skills:
-    {{- range .Values.a2aSkills }}
-    - id: {{ .id }}
-      name: {{ .name }}
-      description: {{ .description | quote }}
-      {{- if .examples }}
-      examples:
-      {{- range .examples }}
-      - {{ . | quote }}
-      {{- end }}
-      {{- end }}
-      {{- if .tags }}
-      tags:
-      {{- range .tags }}
-      - {{ . }}
-      {{- end }}
-      {{- end }}
-      {{- if .inputModes }}
-      inputModes:
-      {{- range .inputModes }}
-      - {{ . }}
-      {{- end }}
-      {{- end }}
-      {{- if .outputModes }}
-      outputModes:
-      {{- range .outputModes }}
-      - {{ . }}
-      {{- end }}
+  declarative:
+    modelConfig: {{ .Values.agent.modelConfig }}
+    {{- if .Values.agent.systemMessageConfigMap }}
+    {{- if .Values.agent.systemMessageConfigMap.enabled }}
+    systemMessageFrom:
+      type: ConfigMap
+      name: {{ .Values.agent.systemMessageConfigMap.name | default "k2a-system-prompt" }}
+      key: {{ .Values.agent.systemMessageConfigMap.key | default "system-prompt" }}
+    {{- else }}
+    systemMessage: |
+      {{- .Values.agent.systemMessage | nindent 6 }}
+    {{- end }}
+    {{- else }}
+    systemMessage: |
+      {{- .Values.agent.systemMessage | nindent 6 }}
+    {{- end }}
+    tools:
+    {{- range $key, $server := .Values.mcpServers }}
+    {{- if $server.enabled }}
+    - type: McpServer
+      mcpServer:
+        apiGroup: kagent.dev
+        kind: MCPServer
+        name: {{ $server.name }}
+        toolNames:
+        {{- range $server.tools }}
+        - {{ . }}
+        {{- end }}
+    {{- end }}
+    {{- end }}
+    {{- if .Values.a2aSkills }}
+    a2aConfig:
+      skills:
+      {{- range .Values.a2aSkills }}
+      - id: {{ .id }}
+        name: {{ .name }}
+        description: {{ .description | quote }}
+        {{- if .examples }}
+        examples:
+        {{- range .examples }}
+        - {{ . | quote }}
+        {{- end }}
+        {{- end }}
+        {{- if .tags }}
+        tags:
+        {{- range .tags }}
+        - {{ . }}
+        {{- end }}
+        {{- end }}
+        {{- if .inputModes }}
+        inputModes:
+        {{- range .inputModes }}
+        - {{ . }}
+        {{- end }}
+        {{- end }}
+        {{- if .outputModes }}
+        outputModes:
+        {{- range .outputModes }}
+        - {{ . }}
+        {{- end }}
+        {{- end }}
       {{- end }}
     {{- end }}
-  {{- end }}
-  deployment:
-    resources:
-      {{- toYaml .Values.agent.resources | nindent 6 }}
+    deployment:
+      resources:
+        {{- toYaml .Values.agent.resources | nindent 8 }}

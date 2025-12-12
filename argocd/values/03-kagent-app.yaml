@@ -267,8 +267,10 @@ agent:
   namespace: k2a  # Mismo namespace que MCP servers para usar MCPServer (kmcp)
   modelConfig: k2a-openai-config  # Opciones: k2a-openai-config, k2a-deepseek-config
   # Memory for RAG with Pinecone (reduces token usage)
+  # NOTE: Memory only works with v1alpha1 Agent, but kagent has a bug with v1alpha1 conversion
+  # Disabled until kagent fixes the v1alpha1 -> v1alpha2 conversion
   memory:
-    enabled: true
+    enabled: false
     name: k2a-memory
   # Use ConfigMap for systemMessage (scalable option)
   systemMessageConfigMap:
