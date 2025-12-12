@@ -281,60 +281,38 @@ agent:
   systemMessage: |
     You are K2A, an AI agent for Kubernetes enterprise monitoring.
 
-    Available Tools by Category:
+    Available Tools (16 total):
 
-    ALERTMANAGER (for alerts, silences, notifications):
-    - getAlerts: Get current firing and silenced alerts
-    - getAlertGroups: Get alerts organized by routing groups
-    - getSilences: List active and expired silences
-    - createSilence: Create silence for maintenance
-    - deleteSilence: Remove a silence
-    - getReceivers: List notification receivers
+    ALERTMANAGER:
+    - getAlerts: Get current firing/silenced alerts
+    - getAlertGroups: Alerts organized by routing groups
     - getAlertmanagerStatus: Check AlertManager health
 
-    PROMETHEUS (for metrics and monitoring):
+    PROMETHEUS:
     - query: Execute instant PromQL query
     - queryRange: Execute range query for time series
-    - getRules: Get alerting and recording rules
-    - getTargets: Get scrape target status
     - getPrometheusStatus: Check Prometheus health
 
-    KUBERNETES (for cluster management):
-    - configuration_view: View current kubeconfig context
-    - configuration_set_namespace: Set default namespace
+    KUBERNETES (read-only):
     - pods_list: List pods in namespace
     - pods_get: Get pod details
     - pods_log: Get pod logs
-    - pods_run: Run a new pod
-    - pods_exec: Execute command in pod
-    - pods_delete: Delete a pod
     - resources_list: List any Kubernetes resources
     - resources_get: Get resource details
-    - resources_create_or_update: Create or update resources
-    - resources_delete: Delete resources
     - events_list: List cluster events
-    - helm_install: Install Helm chart
-    - helm_uninstall: Uninstall Helm release
     - helm_list: List Helm releases
-    - helm_status: Get Helm release status
-    - helm_rollback: Rollback Helm release
 
-    RED HAT SUPPORT (for KB and cases):
+    RED HAT SUPPORT:
     - searchKnowledgeBase: Search Red Hat KB articles
     - getSolution: Get full KB article content
-    - createCase: Create support case
-    - getCase: Get case details
     - searchCases: List and filter cases
-    - addComment: Add comment to case
 
-    Tool Selection Rules:
-    - For ALERTS: Use getAlerts or getAlertGroups
-    - For METRICS: Use query or queryRange
-    - For KUBERNETES RESOURCES: Use pods_list, resources_list, resources_get
-    - For POD TROUBLESHOOTING: Use pods_log, pods_exec
-    - For HELM: Use helm_list, helm_status
-    - For RED HAT KB: Use searchKnowledgeBase
-    - For SUPPORT CASES: Use searchCases, createCase, getCase
+    Tool Selection:
+    - ALERTS: getAlerts, getAlertGroups
+    - METRICS: query, queryRange
+    - K8S RESOURCES: pods_list, resources_list, resources_get
+    - TROUBLESHOOTING: pods_log, events_list
+    - RED HAT KB: searchKnowledgeBase, getSolution
 
   resources:
     requests:
@@ -347,81 +325,52 @@ agent:
 # MCPServer references (kmcp) - Agent y MCP servers en mismo namespace
 # El Agent referencia directamente los MCPServer CRDs de kmcp (sin URLs)
 # Esto es posible porque todo esta en namespace 'k2a'
+#
+# OPTIMIZADO: Reducido de 42 a 16 tools para evitar exceder limite de contexto (128k tokens)
 mcpServers:
   prometheus:
     enabled: true
-    name: prometheus-mcp  # Debe coincidir con servers.prometheus.name
+    name: prometheus-mcp
     tools:
-      - query
-      - queryRange
-      - getRules
-      - getTargets
-      - getPrometheusStatus
+      - query           # Consultas PromQL instantaneas
+      - queryRange      # Consultas de series de tiempo
+      - getPrometheusStatus  # Verificar salud
 
   alertmanager:
     enabled: true
-    name: alertmanager-mcp  # Debe coincidir con servers.alertmanager.name
+    name: alertmanager-mcp
     tools:
-      - getAlerts
-      - getAlertGroups
-      - getSilences
-      - createSilence
-      - deleteSilence
-      - getReceivers
-      - getAlertmanagerStatus
+      - getAlerts       # Ver alertas activas
+      - getAlertGroups  # Alertas agrupadas
+      - getAlertmanagerStatus  # Verificar salud
 
   redhatCases:
-    enabled: true  # Re-enabled with latest image
-    name: redhat-cases-mcp  # Debe coincidir con servers.redhatCases.name
+    enabled: true
+    name: redhat-cases-mcp
     tools:
-      - searchKnowledgeBase
-      - getSolution
-      - createCase
-      - getCase
-      - addComment
-      - searchCases
-      - updateCase
-      - getAccountInfo
-      - getEntitlements
-      - getStatistics
-      - listProducts
-      - listVersions
+      - searchKnowledgeBase  # Buscar articulos KB
+      - getSolution          # Obtener contenido de KB
+      - searchCases          # Buscar casos existentes
 
   sessionize:
-    enabled: false  # Temporarily disabled
-    name: sessionize-mcp  # Debe coincidir con servers.sessionize.name
+    enabled: false  # Deshabilitado - no esencial
+    name: sessionize-mcp
     tools:
       - getSpeakers
-      - findSpeaker
-      - getSessionsBySpeaker
       - getSessions
-      - findSession
-      - getSchedule
 
   kubernetes:
     enabled: true
-    name: kubernetes-mcp  # Debe coincidir con servers.kubernetes.name
+    name: kubernetes-mcp
     tools:
-      # Core Kubernetes tools
-      - configuration_view
-      - configuration_set_namespace
-      - pods_list
-      - pods_get
-      - pods_log
-      - pods_run
-      - pods_exec
-      - pods_delete
-      - resources_list
-      - resources_get
-      - resources_create_or_update
-      - resources_delete
-      - events_list
-      # Helm tools
-      - helm_install
-      - helm_uninstall
-      - helm_list
-      - helm_status
-      - helm_rollback
+      # Solo lectura - esencial para troubleshooting
+      - pods_list       # Listar pods
+      - pods_get        # Detalles de pod
+      - pods_log        # Logs de pod (troubleshooting)
+      - resources_list  # Listar recursos
+      - resources_get   # Detalles de recurso
+      - events_list     # Eventos del cluster
+      - helm_list       # Listar releases Helm
 
 # A2A Skills
 a2aSkills:
@@ -458,27 +407,11 @@ a2aSkills:
     description: Search Red Hat KB and manage support cases
     examples:
       - Search for OOMKilled errors
-      - Create a support case
+      - Find solutions for pod crashes
     tags:
       - redhat
       - kb
       - support
-    inputModes:
-      - text
-    outputModes:
-      - text
-
-  - id: conference-info
-    name: Conference Information
-    description: Get speakers, sessions and schedule from Sessionize events
-    examples:
-      - Who are the speakers at the conference?
-      - Find sessions about Kubernetes
-      - What's the schedule for today?
-    tags:
-      - conference
-      - sessionize
-      - speakers
     inputModes:
       - text
     outputModes:

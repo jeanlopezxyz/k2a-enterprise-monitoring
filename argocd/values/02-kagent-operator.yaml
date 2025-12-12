@@ -114,9 +114,30 @@ grafana-mcp:
 querydoc:
   replicas: 0
 
-# Observability disabled
+# =============================================================================
+# Observability - OpenTelemetry Tracing
+# =============================================================================
+# Para ver trazas, desplegar Jaeger en el cluster:
+#   kubectl create ns jaeger
+#   kubectl apply -n jaeger -f https://raw.githubusercontent.com/jaegertracing/jaeger-operator/main/examples/simplest.yaml
+#
+# O usar el operador de Jaeger de OpenShift:
+#   oc apply -f - <<EOF
+#   apiVersion: jaegertracing.io/v1
+#   kind: Jaeger
+#   metadata:
+#     name: jaeger
+#     namespace: kagent
+#   spec:
+#     strategy: allInOne
+#   EOF
 otel:
   tracing:
-    enabled: false
+    enabled: true
+    exporter:
+      otlp:
+        # Jaeger collector endpoint (OTLP gRPC)
+        # Cambiar si Jaeger esta en otro namespace
+        endpoint: http://jaeger-collector.kagent.svc.cluster.local:4317
   logging:
     enabled: false
