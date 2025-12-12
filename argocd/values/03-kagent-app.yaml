@@ -467,7 +467,8 @@ tracing:
   name: jaeger
   namespace: k2a  # Mismo namespace que la app ArgoCD
   strategy: allInOne
-  # image: omitido - usar imagen por defecto del operador
+  # Usar imagen latest ya que 1.65.0 no existe en registry.redhat.io
+  image: registry.redhat.io/rhosdt/jaeger-all-in-one-rhel8:latest
   logLevel: info
   storage:
     type: memory
