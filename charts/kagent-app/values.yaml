@@ -143,3 +143,28 @@ podDisruptionBudget:
   enabled: false
   minAvailable: 1
   # maxUnavailable: 1
+
+# =============================================================================
+# Tracing - Jaeger Instance
+# =============================================================================
+# Requires: Red Hat OpenShift distributed tracing platform operator
+# The operator creates Jaeger instances via the Jaeger CRD
+tracing:
+  enabled: false
+  name: jaeger
+  namespace: kagent
+  strategy: allInOne
+  image: registry.redhat.io/rhosdt/jaeger-all-in-one-rhel8:1.65.0
+  logLevel: info
+  storage:
+    type: memory
+    maxTraces: 100000
+  ingress:
+    enabled: false
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi

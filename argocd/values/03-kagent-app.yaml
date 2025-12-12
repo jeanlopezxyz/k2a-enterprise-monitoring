@@ -453,3 +453,31 @@ autoscaling:
 
 podDisruptionBudget:
   enabled: false
+
+# =============================================================================
+# SECCION 4: TRACING - JAEGER INSTANCE
+# =============================================================================
+# Despliega instancia de Jaeger usando el operador Red Hat OpenShift distributed tracing
+# El operador ya esta instalado (jaeger-operator.v1.65.0-1)
+#
+# Endpoint para kagent: http://jaeger-collector.kagent.svc.cluster.local:4317
+#
+tracing:
+  enabled: true
+  name: jaeger
+  namespace: kagent  # Mismo namespace que kagent operator
+  strategy: allInOne
+  image: registry.redhat.io/rhosdt/jaeger-all-in-one-rhel8:1.65.0
+  logLevel: info
+  storage:
+    type: memory
+    maxTraces: 100000
+  ingress:
+    enabled: true  # Habilitar ruta para acceder a Jaeger UI
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi

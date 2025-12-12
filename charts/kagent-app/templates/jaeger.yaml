@@ -1,0 +1,46 @@
+{{- if .Values.tracing.enabled }}
+---
+# Jaeger instance for distributed tracing
+# Requires: Red Hat OpenShift distributed tracing platform operator
+apiVersion: jaegertracing.io/v1
+kind: Jaeger
+metadata:
+  name: {{ .Values.tracing.name | default "jaeger" }}
+  namespace: {{ .Values.tracing.namespace | default "kagent" }}
+  labels:
+    {{- include "k2a-agent.labels" . | nindent 4 }}
+spec:
+  strategy: {{ .Values.tracing.strategy | default "allInOne" }}
+  {{- if eq .Values.tracing.strategy "allInOne" }}
+  allInOne:
+    image: {{ .Values.tracing.image | default "registry.redhat.io/rhosdt/jaeger-all-in-one-rhel8:1.65.0" }}
+    options:
+      log-level: {{ .Values.tracing.logLevel | default "info" }}
+      collector:
+        otlp:
+          enabled: true
+          grpc:
+            host-port: "0.0.0.0:4317"
+          http:
+            host-port: "0.0.0.0:4318"
+    {{- with .Values.tracing.resources }}
+    resources:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+  {{- end }}
+  storage:
+    type: {{ .Values.tracing.storage.type | default "memory" }}
+    {{- if eq .Values.tracing.storage.type "memory" }}
+    options:
+      memory:
+        max-traces: {{ .Values.tracing.storage.maxTraces | default 100000 }}
+    {{- end }}
+  ingress:
+    enabled: {{ .Values.tracing.ingress.enabled | default false }}
+    {{- if .Values.tracing.ingress.enabled }}
+    openshift:
+      sar: '{"namespace": "{{ .Values.tracing.namespace | default "kagent" }}", "resource": "pods", "verb": "get"}'
+      delegateUrls: '{"/":{"namespace": "{{ .Values.tracing.namespace | default "kagent" }}", "resource": "pods", "verb": "get"}}'
+    security: oauth-proxy
+    {{- end }}
+{{- end }}
