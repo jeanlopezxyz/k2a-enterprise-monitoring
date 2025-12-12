@@ -93,3 +93,9 @@ spec:
       kind: ModelConfig
       jsonPointers:
         - /status
+    # Jaeger operator webhook mutates image to 1.65.0 tag which doesn't exist
+    # Ignore this field to prevent ArgoCD from continuously syncing
+    - group: jaegertracing.io
+      kind: Jaeger
+      jsonPointers:
+        - /spec/allInOne/image
